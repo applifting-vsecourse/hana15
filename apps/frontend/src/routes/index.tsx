@@ -100,6 +100,9 @@ function LandingPage() {
           </div>
         </section>
       </main>
+      <footer className="mx-auto w-full max-w-2xl px-4 pb-8 text-center text-sm text-muted-foreground">
+        My name is Adam Hanus
+      </footer>
     </>
   )
 }
