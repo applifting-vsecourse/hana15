@@ -13,14 +13,26 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
+import { MOODS } from "@/features/quack/api/quackSchemas"
+import { MOOD_DISPLAY } from "@/features/quack/components/moods"
 import { useAddQuack } from "@/features/quack/hooks/useAddQuack"
 
 // Mirrors the server-side DTO (MaxLength(280)) so the user is told before
 // the request is made — the server still validates independently.
 const MAX_LENGTH = 280
+
+// Radix Select can't hold an empty value, so "no mood" needs a stand-in.
+const NO_MOOD = "none"
 
 const schema = z.object({
   text: z
@@ -28,6 +40,7 @@ const schema = z.object({
     .trim()
     .min(1, "Write something first")
     .max(MAX_LENGTH, `Keep it under ${MAX_LENGTH} characters`),
+  mood: z.enum([NO_MOOD, ...MOODS]),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -38,14 +51,15 @@ export function QuackForm({ className }: QuackFormProps) {
   const addQuack = useAddQuack()
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { text: "" },
+    defaultValues: { text: "", mood: NO_MOOD },
   })
 
   const text = useWatch({ control: form.control, name: "text" })
   const length = text?.length ?? 0
 
   const handleSubmit = (values: FormValues) => {
-    addQuack.mutate({ text: values.text }, { onSuccess: () => form.reset() })
+    const mood = values.mood === NO_MOOD ? undefined : values.mood
+    addQuack.mutate({ text: values.text, mood }, { onSuccess: () => form.reset() })
   }
 
   return (
@@ -61,24 +75,60 @@ export function QuackForm({ className }: QuackFormProps) {
           </Alert>
         ) : null}
 
-        <FormField
-          control={form.control}
-          name="text"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>New quack</FormLabel>
-              <FormControl>
-                <Textarea
-                  rows={3}
-                  placeholder="Quack something..."
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <FormField
+            control={form.control}
+            name="text"
+            render={({ field }) => (
+              <FormItem className="flex-1">
+                <FormLabel>New quack</FormLabel>
+                <FormControl>
+                  <Textarea
+                    rows={3}
+                    placeholder="Quack something..."
+                    disabled={addQuack.isPending}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="mood"
+            render={({ field }) => (
+              <FormItem className="sm:w-36">
+                <FormLabel>Mood</FormLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
                   disabled={addQuack.isPending}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={NO_MOOD}>No mood</SelectItem>
+                    {MOODS.map((mood) => (
+                      <SelectItem
+                        key={mood}
+                        value={mood}
+                      >
+                        <span aria-hidden="true">{MOOD_DISPLAY[mood].emoji}</span>
+                        {MOOD_DISPLAY[mood].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="flex items-center justify-end gap-3">
           <span

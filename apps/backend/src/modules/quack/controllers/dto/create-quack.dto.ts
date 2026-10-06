@@ -1,5 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { Mood, MOODS } from '@/modules/quack/domain/quack';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateQuackDto {
   @ApiProperty({
@@ -11,4 +18,13 @@ export class CreateQuackDto {
   @IsNotEmpty()
   @MaxLength(280)
   text!: string;
+
+  @ApiPropertyOptional({
+    description: 'How the author feels about the quack',
+    enum: MOODS,
+    example: 'silly',
+  })
+  @IsOptional()
+  @IsIn(MOODS)
+  mood?: Mood;
 }
