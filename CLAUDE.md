@@ -31,3 +31,23 @@ The CLI puts `shadow-xs`/`shadow-sm` on inputs, textareas and cards. [`DESIGN.md
 Assume the dev servers are up. If something is listening on the app's ports, that is this application: use it. Don't start a second instance, don't restart it, don't run `pnpm dev`.
 
 Don't reach for the browser to check your own work. Tests and type-checks are the evidence; open the running app when asked to, not on your own initiative.
+
+### `cn` is `@/lib/utils`
+
+Import `cn` from `@/lib/utils`. Never install the `cn` npm package — it's unrelated, and the build breaks as soon as it's removed from `node_modules`.
+
+### Text filters escape LIKE wildcards
+
+Prisma's `contains` / `startsWith` / `endsWith` don't escape `%`, `_` or `\`, so user input acts as a wildcard — a search for `%` matches every row. Escape those characters with a backslash before passing user input to these filters.
+
+### Stories
+
+Stories live in `stories/<feature>.md`. A story is ready when:
+
+- it says who wants it, what they get and why
+- every acceptance criterion can be checked in the browser, yes or no
+- it lists what's out of scope
+- it covers what happens when there's nothing to show
+- no questions are left open
+
+Requirements a browser can't show (logging, debounce timing) go under "Technical notes", not the acceptance criteria.
