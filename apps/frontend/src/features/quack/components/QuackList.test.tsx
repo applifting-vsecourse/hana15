@@ -39,6 +39,23 @@ describe("QuackList", () => {
     }
   })
 
+  it("says there are no quacks yet when the feed is empty", () => {
+    render(<QuackList quacks={[]} />)
+
+    expect(screen.getByText("No quacks yet. Post the first one.")).toBeInTheDocument()
+  })
+
+  it("shows a custom empty message, e.g. for a search without matches", () => {
+    render(
+      <QuackList
+        quacks={[]}
+        emptyMessage="No quacks match “bread”"
+      />,
+    )
+
+    expect(screen.getByText("No quacks match “bread”")).toBeInTheDocument()
+  })
+
   it("shows an error with a working reload button", async () => {
     const onReload = vi.fn()
     render(
