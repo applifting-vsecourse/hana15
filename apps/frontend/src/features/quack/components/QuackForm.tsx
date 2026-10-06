@@ -1,3 +1,4 @@
+import { useRef } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useForm, useWatch } from "react-hook-form"
@@ -24,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
 import { MOODS } from "@/features/quack/api/quackSchemas"
+import { EmojiPicker } from "@/features/quack/components/EmojiPicker"
 import { MOOD_DISPLAY } from "@/features/quack/components/moods"
 import { useAddQuack } from "@/features/quack/hooks/useAddQuack"
 
@@ -54,8 +56,28 @@ export function QuackForm({ className }: QuackFormProps) {
     defaultValues: { text: "", mood: NO_MOOD },
   })
 
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
   const text = useWatch({ control: form.control, name: "text" })
   const length = text?.length ?? 0
+
+  // Insert at the caret (replacing any selection), then put the caret after
+  // the emoji so the user can keep typing.
+  const insertEmoji = (emoji: string) => {
+    const current = form.getValues("text")
+    const textarea = textareaRef.current
+    const start = textarea?.selectionStart ?? current.length
+    const end = textarea?.selectionEnd ?? current.length
+    form.setValue("text", current.slice(0, start) + emoji + current.slice(end), {
+      shouldDirty: true,
+      shouldValidate: form.formState.isSubmitted,
+    })
+    requestAnimationFrame(() => {
+      const caret = start + emoji.length
+      textarea?.focus()
+      textarea?.setSelectionRange(caret, caret)
+    })
+  }
 
   const handleSubmit = (values: FormValues) => {
     const mood = values.mood === NO_MOOD ? undefined : values.mood
@@ -88,6 +110,10 @@ export function QuackForm({ className }: QuackFormProps) {
                     placeholder="Quack something..."
                     disabled={addQuack.isPending}
                     {...field}
+                    ref={(element) => {
+                      field.ref(element)
+                      textareaRef.current = element
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
@@ -130,7 +156,16 @@ export function QuackForm({ className }: QuackFormProps) {
           />
         </div>
 
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center gap-3">
+          <EmojiPicker
+            onSelect={insertEmoji}
+            isDisabled={addQuack.isPending}
+          />
+          <span
+            // Pushes the counter and submit button to the right.
+            aria-hidden="true"
+            className="flex-1"
+          />
           <span
             className={cn(
               "text-sm",
