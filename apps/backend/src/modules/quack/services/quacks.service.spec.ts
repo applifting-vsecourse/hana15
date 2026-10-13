@@ -3,7 +3,7 @@
 import { Quack } from '@/modules/quack/domain/quack';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
-import { Logger } from '@nestjs/common';
+import { BadRequestException, Logger, NotFoundException } from '@nestjs/common';
 import { mock } from 'jest-mock-extended';
 import { QuacksService } from './quacks.service';
 
@@ -15,6 +15,7 @@ const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   createdAt: new Date('2026-01-01T12:00:00Z'),
   updatedAt: new Date('2026-01-01T12:00:00Z'),
   user: { id: 'u1', name: 'Caffeinated Duck', username: 'CaffeinatedDuck' },
+  poll: null,
   ...overrides,
 });
 
@@ -30,7 +31,7 @@ describe('QuacksService', () => {
 
     await expect(service.getQuacks(user)).resolves.toEqual(quacks);
     expect(repository.getQuacks).toHaveBeenCalledTimes(1);
-    expect(repository.getQuacks).toHaveBeenCalledWith();
+    expect(repository.getQuacks).toHaveBeenCalledWith('u1');
   });
 
   it('splits a search into words and filters by all of them', async () => {
@@ -44,7 +45,7 @@ describe('QuacksService', () => {
       quacks,
     );
     expect(repository.getQuacks).toHaveBeenCalledTimes(1);
-    expect(repository.getQuacks).toHaveBeenCalledWith({
+    expect(repository.getQuacks).toHaveBeenCalledWith('u1', {
       words: ['critic', 'bread'],
     });
   });
@@ -59,7 +60,7 @@ describe('QuacksService', () => {
       await service.getQuacks(user, search);
 
       expect(repository.getQuacks).toHaveBeenCalledTimes(1);
-      expect(repository.getQuacks).toHaveBeenCalledWith();
+      expect(repository.getQuacks).toHaveBeenCalledWith('u1');
     },
   );
 
@@ -123,5 +124,76 @@ describe('QuacksService', () => {
       mood: 'silly',
       userId: 'u1',
     });
+  });
+
+  it('creates a poll with trimmed options and logs it without the content', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const created = aQuack({
+      id: 'q4',
+      poll: {
+        options: [
+          { id: 'o1', text: 'Thai', votes: 0 },
+          { id: 'o2', text: 'Pizza', votes: 0 },
+        ],
+        myOptionId: null,
+      },
+    });
+    const repository = mock<QuackRepository>();
+    repository.createQuack.mockResolvedValue(created);
+
+    await new QuacksService(repository).createQuack(user, {
+      text: 'Lunch?',
+      pollOptions: [' Thai ', 'Pizza'],
+    });
+
+    expect(repository.createQuack).toHaveBeenCalledWith({
+      text: 'Lunch?',
+      userId: 'u1',
+      pollOptions: ['Thai', 'Pizza'],
+    });
+    expect(log).toHaveBeenCalledWith('Poll created: userId=u1 pollId=q4');
+    log.mockRestore();
+  });
+
+  it('rejects poll options that differ only by letter case', async () => {
+    const repository = mock<QuackRepository>();
+
+    await expect(
+      new QuacksService(repository).createQuack(user, {
+        text: 'Lunch?',
+        pollOptions: ['Thai', ' thai'],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.createQuack).not.toHaveBeenCalled();
+  });
+
+  it('records a vote and logs it without the content', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const poll = {
+      options: [{ id: 'o1', text: 'Thai', votes: 1 }],
+      myOptionId: 'o1',
+    };
+    const repository = mock<QuackRepository>();
+    repository.vote.mockResolvedValue(poll);
+
+    await expect(
+      new QuacksService(repository).vote(user, 'q4', 'o1'),
+    ).resolves.toEqual(poll);
+    expect(repository.vote).toHaveBeenCalledWith({
+      quackId: 'q4',
+      optionId: 'o1',
+      userId: 'u1',
+    });
+    expect(log).toHaveBeenCalledWith('Poll vote: userId=u1 pollId=q4');
+    log.mockRestore();
+  });
+
+  it('refuses a vote for an option that is not in the poll', async () => {
+    const repository = mock<QuackRepository>();
+    repository.vote.mockResolvedValue(null);
+
+    await expect(
+      new QuacksService(repository).vote(user, 'q4', 'nope'),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
