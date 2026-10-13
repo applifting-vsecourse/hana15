@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Seo } from "@/components/Seo"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 
+import { useSession } from "@/features/auth/hooks/useSession"
 import { quacksQueryOptions } from "@/features/quack/api/quacksQueryOptions"
 import { QuackForm } from "@/features/quack/components/QuackForm"
 import { QuackList } from "@/features/quack/components/QuackList"
@@ -23,6 +24,8 @@ function QuacksPage() {
   // part of the URL.
   const [searchInput, setSearchInput] = useState("")
   const searchTerm = toSearchTerm(useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS))
+
+  const { user } = useSession()
 
   const quacksQuery = useQuery({
     ...quacksQueryOptions(searchTerm),
@@ -45,7 +48,12 @@ function QuacksPage() {
 
         {/* Hidden while searching: a new quack that doesn't match the search
             would otherwise seem to vanish after posting. */}
-        {searchTerm ? null : <QuackForm className="mb-4" />}
+        {searchTerm ? null : (
+          <QuackForm
+            className="mb-4"
+            defaultMood={user?.defaultMood}
+          />
+        )}
 
         <QuackList
           quacks={quacksQuery.data ?? []}

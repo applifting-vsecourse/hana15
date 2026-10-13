@@ -22,19 +22,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { MOOD_DISPLAY, MOODS, NO_MOOD, type Mood } from "@/lib/mood"
 import { cn } from "@/lib/utils"
 
-import { MOODS } from "@/features/quack/api/quackSchemas"
 import { EmojiPicker } from "@/features/quack/components/EmojiPicker"
-import { MOOD_DISPLAY } from "@/features/quack/components/moods"
 import { useAddQuack } from "@/features/quack/hooks/useAddQuack"
 
 // Mirrors the server-side DTO (MaxLength(280)) so the user is told before
 // the request is made — the server still validates independently.
 const MAX_LENGTH = 280
-
-// Radix Select can't hold an empty value, so "no mood" needs a stand-in.
-const NO_MOOD = "none"
 
 const schema = z.object({
   text: z
@@ -47,13 +43,17 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-type QuackFormProps = { className?: string }
+type QuackFormProps = {
+  className?: string
+  // The user's saved preference; the form starts (and resets) with it selected.
+  defaultMood?: Mood | null
+}
 
-export function QuackForm({ className }: QuackFormProps) {
+export function QuackForm({ className, defaultMood }: QuackFormProps) {
   const addQuack = useAddQuack()
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { text: "", mood: NO_MOOD },
+    defaultValues: { text: "", mood: defaultMood ?? NO_MOOD },
   })
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)

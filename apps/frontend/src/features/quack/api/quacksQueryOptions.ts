@@ -1,8 +1,8 @@
 import { queryOptions } from "@tanstack/react-query"
 
 import { api } from "@/lib/api-client"
+import { quackKeys } from "@/lib/quack-keys"
 
-import { quackKeys } from "@/features/quack/api/quackKeys"
 import { quacksSchema } from "@/features/quack/api/quackSchemas"
 
 // `search` is sent as-is; deciding whether input counts as a search is the
