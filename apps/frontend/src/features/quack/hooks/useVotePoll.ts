@@ -35,6 +35,10 @@ export function useVotePoll(quackId: string) {
       context?.previous.forEach(([key, data]) => queryClient.setQueryData(key, data))
     },
     onSuccess: (poll) => setPoll(() => poll),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: quackKeys.lists() }),
+    onSettled: () => {
+      // Not returned on purpose: the vote is done (or has failed) now, and the
+      // error must show without waiting for the feed to reload.
+      void queryClient.invalidateQueries({ queryKey: quackKeys.lists() })
+    },
   })
 }
