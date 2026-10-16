@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
+import { quackKeys } from "@/lib/quack-keys"
+
 import { addQuack } from "@/features/quack/api/addQuack"
-import { quackKeys } from "@/features/quack/api/quackKeys"
 
 // The hook owns the mutation only — form state belongs to react-hook-form
 // in the component, the same way the auth forms do it.
