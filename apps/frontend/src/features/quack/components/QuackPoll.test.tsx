@@ -3,7 +3,8 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { quackKeys } from "@/features/quack/api/quackKeys"
+import { quackKeys } from "@/lib/quack-keys"
+
 import type { Poll, Quack } from "@/features/quack/api/quackSchemas"
 import { votePoll } from "@/features/quack/api/votePoll"
 import { QuackItem } from "@/features/quack/components/QuackItem"

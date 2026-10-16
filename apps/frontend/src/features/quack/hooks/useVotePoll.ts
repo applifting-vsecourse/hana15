@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { quackKeys } from "@/features/quack/api/quackKeys"
+import { quackKeys } from "@/lib/quack-keys"
+
 import type { Poll, Quack } from "@/features/quack/api/quackSchemas"
 import { votePoll } from "@/features/quack/api/votePoll"
 import { withVote } from "@/features/quack/components/pollResults"
