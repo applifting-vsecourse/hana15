@@ -1,4 +1,4 @@
-import { Mood, MOODS, Quack } from '@/modules/quack/domain/quack';
+import { Mood, MOODS, Poll, Quack } from '@/modules/quack/domain/quack';
 import { ApiProperty } from '@nestjs/swagger';
 
 class QuackUserDto {
@@ -10,6 +10,36 @@ class QuackUserDto {
 
   @ApiProperty()
   username!: string;
+}
+
+class PollOptionDto {
+  @ApiProperty()
+  id!: string;
+
+  @ApiProperty()
+  text!: string;
+
+  @ApiProperty({ description: 'Number of votes for this option' })
+  votes!: number;
+}
+
+export class PollResponseDto {
+  @ApiProperty({ type: [PollOptionDto] })
+  options!: PollOptionDto[];
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+    description: 'The option the signed-in user voted for, if any',
+  })
+  myOptionId!: string | null;
+
+  static fromDomain(poll: Poll): PollResponseDto {
+    return {
+      options: poll.options.map(({ id, text, votes }) => ({ id, text, votes })),
+      myOptionId: poll.myOptionId,
+    };
+  }
 }
 
 export class QuackResponseDto {
@@ -31,6 +61,9 @@ export class QuackResponseDto {
   @ApiProperty({ type: QuackUserDto })
   user!: QuackUserDto;
 
+  @ApiProperty({ type: PollResponseDto, nullable: true })
+  poll!: PollResponseDto | null;
+
   static fromDomain(quack: Quack): QuackResponseDto {
     if (!quack.user) {
       throw new Error(
@@ -48,6 +81,7 @@ export class QuackResponseDto {
         name: quack.user.name,
         username: quack.user.username,
       },
+      poll: quack.poll ? PollResponseDto.fromDomain(quack.poll) : null,
     };
   }
 }

@@ -36,9 +36,19 @@ Don't reach for the browser to check your own work. Tests and type-checks are th
 
 Import `cn` from `@/lib/utils`. Never install the `cn` npm package — it's unrelated, and the build breaks as soon as it's removed from `node_modules`.
 
+`shadcn add` itself generates `import { cn } from "cn"` and adds that package to `package.json`. After every `add`: fix the import to `@/lib/utils`, restore `package.json` and `pnpm-lock.yaml` with `git checkout`.
+
 ### Text filters escape LIKE wildcards
 
 Prisma's `contains` / `startsWith` / `endsWith` don't escape `%`, `_` or `\`, so user input acts as a wildcard — a search for `%` matches every row. Escape those characters with a backslash before passing user input to these filters.
+
+### Optimistic mutations don't await the refetch
+
+In `onSettled` / `onSuccess`, don't return the promise from `invalidateQueries`. The mutation would stay pending until the list has reloaded, so a failed save shows its error late — or not at all while the server is down. Call it with `void`.
+
+### Migrations and the dev database
+
+The dev database can be ahead of the repo (a migration from another branch). Then `prisma migrate dev` refuses to run and offers a reset. Write the migration by hand and apply it with `pnpm backend migrate`. Never run `db:reset` or `migrate reset` unless asked to.
 
 ### Stories
 

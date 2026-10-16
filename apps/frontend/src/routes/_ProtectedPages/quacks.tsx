@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useIsMutating, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 
 import { Seo } from "@/components/Seo"
@@ -11,6 +11,10 @@ import { QuackForm } from "@/features/quack/components/QuackForm"
 import { QuackList } from "@/features/quack/components/QuackList"
 import { QuackSearch } from "@/features/quack/components/QuackSearch"
 import { toSearchTerm } from "@/features/quack/components/searchTerm"
+import { VOTE_MUTATION_KEY } from "@/features/quack/hooks/useVotePoll"
+
+// How often other people's votes show up without a reload.
+const POLL_REFETCH_MS = 5000
 
 // Wait for a pause in typing so every keystroke isn't a request.
 const SEARCH_DEBOUNCE_MS = 300
@@ -27,8 +31,13 @@ function QuacksPage() {
 
   const { user } = useSession()
 
+  // Don't refetch while a vote is in flight: the answer would be older than
+  // the numbers the user has just clicked into place.
+  const isVoting = useIsMutating({ mutationKey: VOTE_MUTATION_KEY }) > 0
+
   const quacksQuery = useQuery({
     ...quacksQueryOptions(searchTerm),
+    refetchInterval: isVoting ? false : POLL_REFETCH_MS,
     // Keep showing the current list while the next search loads, instead of
     // flashing a spinner after every pause in typing.
     placeholderData: keepPreviousData,
