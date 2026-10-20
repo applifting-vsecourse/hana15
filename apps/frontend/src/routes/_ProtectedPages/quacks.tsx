@@ -1,8 +1,10 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { keepPreviousData, useIsMutating, useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 
 import { Seo } from "@/components/Seo"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 
 import { useSession } from "@/features/auth/hooks/useSession"
@@ -29,14 +31,17 @@ function QuacksPage() {
   const [searchInput, setSearchInput] = useState("")
   const searchTerm = toSearchTerm(useDebouncedValue(searchInput, SEARCH_DEBOUNCE_MS))
 
+  const [tab, setTab] = useState<"all" | "mine">("all")
+  const isMine = tab === "mine"
   const { user } = useSession()
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   // Don't refetch while a vote is in flight: the answer would be older than
   // the numbers the user has just clicked into place.
   const isVoting = useIsMutating({ mutationKey: VOTE_MUTATION_KEY }) > 0
 
   const quacksQuery = useQuery({
-    ...quacksQueryOptions(searchTerm),
+    ...quacksQueryOptions(searchTerm, isMine),
     refetchInterval: isVoting ? false : POLL_REFETCH_MS,
     // Keep showing the current list while the next search loads, instead of
     // flashing a spinner after every pause in typing.
@@ -55,12 +60,24 @@ function QuacksPage() {
           className="mb-6"
         />
 
+        <Tabs
+          value={tab}
+          onValueChange={(value) => setTab(value as "all" | "mine")}
+          className="mb-4"
+        >
+          <TabsList variant="line">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="mine">Mine</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         {/* Hidden while searching: a new quack that doesn't match the search
             would otherwise seem to vanish after posting. */}
         {searchTerm ? null : (
           <QuackForm
             className="mb-4"
             defaultMood={user?.defaultMood}
+            textareaRef={textareaRef}
           />
         )}
 
@@ -71,7 +88,25 @@ function QuacksPage() {
           // Only the error state offers a retry — posting invalidates the list,
           // and refocusing the tab refetches it.
           onReload={() => void quacksQuery.refetch()}
-          emptyMessage={searchTerm ? `No quacks match “${searchTerm}”` : undefined}
+          currentUserId={user?.id}
+          emptyMessage={
+            searchTerm
+              ? `No quacks match “${searchTerm}”`
+              : isMine
+                ? "You haven't posted any quacks yet."
+                : undefined
+          }
+          emptyAction={
+            isMine && !searchTerm ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => textareaRef.current?.focus()}
+              >
+                Write your first quack
+              </Button>
+            ) : undefined
+          }
         />
       </section>
     </>

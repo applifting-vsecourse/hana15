@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, type RefObject } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useForm, useWatch } from "react-hook-form"
@@ -76,9 +76,10 @@ type QuackFormProps = {
   className?: string
   // The user's saved preference; the form starts (and resets) with it selected.
   defaultMood?: Mood | null
+  textareaRef?: RefObject<HTMLTextAreaElement | null>
 }
 
-export function QuackForm({ className, defaultMood }: QuackFormProps) {
+export function QuackForm({ className, defaultMood, textareaRef: externalRef }: QuackFormProps) {
   const addQuack = useAddQuack()
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -151,6 +152,7 @@ export function QuackForm({ className, defaultMood }: QuackFormProps) {
                     ref={(element) => {
                       field.ref(element)
                       textareaRef.current = element
+                      if (externalRef) externalRef.current = element
                     }}
                   />
                 </FormControl>

@@ -73,13 +73,14 @@ export class QuackRepository {
    * author's display name, case-insensitive, accents significant) are returned.
    */
   async getQuacks(
-    userId: string,
-    filter?: { words: string[] },
+    viewerId: string,
+    filter?: { words?: string[]; authorId?: string },
   ): Promise<Quack[]> {
     const quacks = await this.prisma.quack.findMany({
       where: filter
         ? {
-            AND: filter.words.map(escapeLike).map((word) => ({
+            userId: filter.authorId,
+            AND: (filter.words ?? []).map(escapeLike).map((word) => ({
               OR: [
                 { text: { contains: word, mode: 'insensitive' as const } },
                 {
@@ -91,7 +92,7 @@ export class QuackRepository {
             })),
           }
         : undefined,
-      include: { user: true, pollOptions: pollOptionsInclude(userId) },
+      include: { user: true, pollOptions: pollOptionsInclude(viewerId) },
       orderBy: { createdAt: 'desc' },
     });
     return quacks.map(mapPrismaQuackToDomain);
@@ -157,5 +158,17 @@ export class QuackRepository {
       update: { optionId: data.optionId },
     });
     return this.getPoll(data.quackId, data.userId);
+  }
+
+  async getQuackOwnerId(id: string): Promise<string | null> {
+    const quack = await this.prisma.quack.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+    return quack?.userId ?? null;
+  }
+
+  async deleteQuack(id: string): Promise<void> {
+    await this.prisma.quack.delete({ where: { id } });
   }
 }

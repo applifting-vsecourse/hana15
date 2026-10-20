@@ -3,6 +3,7 @@ import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -18,14 +19,22 @@ export class QuacksService {
 
   constructor(private readonly quackRepository: QuackRepository) {}
 
-  async getQuacks(user: Identity, search?: string): Promise<Quack[]> {
-    const term = search?.trim() ?? '';
+  async getQuacks(
+    user: Identity,
+    options: { search?: string; mine?: boolean } = {},
+  ): Promise<Quack[]> {
+    // "mine" is resolved from the session, never from a request parameter
+    const authorId = options.mine ? user.id : undefined;
+    const term = options.search?.trim() ?? '';
     if (term.length < MIN_SEARCH_LENGTH) {
-      return this.quackRepository.getQuacks(user.id);
+      return authorId
+        ? this.quackRepository.getQuacks(user.id, { authorId })
+        : this.quackRepository.getQuacks(user.id);
     }
 
     const quacks = await this.quackRepository.getQuacks(user.id, {
       words: term.split(/\s+/),
+      authorId,
     });
     // Measures whether people use search. Never log the query text itself.
     this.logger.log(
@@ -76,5 +85,17 @@ export class QuacksService {
     }
     this.logger.log(`Poll vote: userId=${user.id} pollId=${quackId}`);
     return poll;
+  }
+
+  async deleteQuack(user: Identity, quackId: string): Promise<void> {
+    const ownerId = await this.quackRepository.getQuackOwnerId(quackId);
+    if (ownerId === null) {
+      throw new NotFoundException('Quack not found');
+    }
+    // The ownership check lives here, not in the UI: the API is callable directly.
+    if (ownerId !== user.id) {
+      throw new ForbiddenException('You can only delete your own quacks');
+    }
+    await this.quackRepository.deleteQuack(quackId);
   }
 }
