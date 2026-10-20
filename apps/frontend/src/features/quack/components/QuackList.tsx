@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Loader2, RefreshCw } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -12,6 +13,8 @@ type QuackListProps = {
   error?: Error
   onReload?: () => void
   emptyMessage?: string
+  emptyAction?: ReactNode
+  currentUserId?: string
 }
 
 export function QuackList({
@@ -20,6 +23,8 @@ export function QuackList({
   error,
   onReload,
   emptyMessage = "No quacks yet. Post the first one.",
+  emptyAction,
+  currentUserId,
 }: QuackListProps) {
   return (
     <div className="flex flex-col">
@@ -52,13 +57,17 @@ export function QuackList({
       ) : null}
 
       {!isLoading && !error && quacks.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">{emptyMessage}</p>
+        <div className="flex flex-col items-center gap-3 py-8">
+          <p className="text-center text-sm text-muted-foreground">{emptyMessage}</p>
+          {emptyAction}
+        </div>
       ) : null}
 
       {quacks.map((quack) => (
         <QuackItem
           key={quack.id}
           quack={quack}
+          canDelete={currentUserId === quack.userId}
         />
       ))}
     </div>
