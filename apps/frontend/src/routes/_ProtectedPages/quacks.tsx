@@ -89,6 +89,7 @@ function QuacksPage() {
           // and refocusing the tab refetches it.
           onReload={() => void quacksQuery.refetch()}
           currentUserId={user?.id}
+          isModerator={user?.role === "admin"}
           emptyMessage={
             searchTerm
               ? `No quacks match “${searchTerm}”`

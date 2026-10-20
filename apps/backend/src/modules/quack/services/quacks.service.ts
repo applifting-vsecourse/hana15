@@ -92,8 +92,9 @@ export class QuacksService {
     if (ownerId === null) {
       throw new NotFoundException('Quack not found');
     }
-    // The ownership check lives here, not in the UI: the API is callable directly.
-    if (ownerId !== user.id) {
+    // The permission check lives here, not in the UI: the API is callable directly.
+    // The role comes from the session, never from the request.
+    if (ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You can only delete your own quacks');
     }
     await this.quackRepository.deleteQuack(quackId);

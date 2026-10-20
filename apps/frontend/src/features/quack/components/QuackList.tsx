@@ -15,6 +15,7 @@ type QuackListProps = {
   emptyMessage?: string
   emptyAction?: ReactNode
   currentUserId?: string
+  isModerator?: boolean
 }
 
 export function QuackList({
@@ -25,6 +26,7 @@ export function QuackList({
   emptyMessage = "No quacks yet. Post the first one.",
   emptyAction,
   currentUserId,
+  isModerator,
 }: QuackListProps) {
   return (
     <div className="flex flex-col">
@@ -67,7 +69,7 @@ export function QuackList({
         <QuackItem
           key={quack.id}
           quack={quack}
-          canDelete={currentUserId === quack.userId}
+          canDelete={isModerator === true || currentUserId === quack.userId}
         />
       ))}
     </div>
