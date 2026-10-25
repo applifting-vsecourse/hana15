@@ -48,7 +48,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     ports:
-      - '${BACKEND_HOST_PORT:-4050}:4050'
+      - '${BACKEND_HOST_PORT:-4060}:4060'
 
   frontend:
     build:
@@ -56,13 +56,13 @@ services:
       dockerfile: apps/frontend/Dockerfile.deploy
       args:
         # The backend mounts all REST routes under /api.
-        VITE_API_URL: ${BACKEND_URL:-http://localhost:4050}/api
-        VITE_BETTER_AUTH_URL: ${BACKEND_URL:-http://localhost:4050}
+        VITE_API_URL: ${BACKEND_URL:-http://127.0.0.1:4060}/api
+        VITE_BETTER_AUTH_URL: ${BACKEND_URL:-http://127.0.0.1:4060}
     restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - '${FRONTEND_HOST_PORT:-3050}:80'
+      - '${FRONTEND_HOST_PORT:-3060}:80'
 
 volumes:
   db-data:
