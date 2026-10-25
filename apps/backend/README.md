@@ -61,7 +61,7 @@ This project uses PostgreSQL running in Docker Compose for both development and 
 pnpm backend docker:up
 ```
 
-   It listens on host port **5433** so it can't clash with a Postgres you already run locally. Credentials for development are `quacker` / `quacker` / `quacker`.
+   It listens on host port **5434** so it can't clash with a Postgres you already run locally. Credentials for development are `quacker` / `quacker` / `quacker`.
 
 2. Browse the data:
 
@@ -77,7 +77,7 @@ pnpm backend start:dev
 
 ## API Documentation
 
-REST API (Swagger/OpenAPI) is available at http://localhost:4050/api/docs when the server is running.
+REST API (Swagger/OpenAPI) is available at http://127.0.0.1:4060/api/docs when the server is running.
 
 # Installation
 

@@ -40,7 +40,7 @@ export class Config {
   readonly nodeEnv?: string;
 
   @Env('BACKEND_URL', {
-    defaultValue: 'http://localhost:4050',
+    defaultValue: 'http://127.0.0.1:4060',
     expose: true,
     removeTrailingSlash: true,
   })
@@ -49,7 +49,7 @@ export class Config {
   readonly backendUrl!: string;
 
   @Env('FRONTEND_URL', {
-    defaultValue: 'http://localhost:3050',
+    defaultValue: 'http://127.0.0.1:3060',
     expose: true,
     removeTrailingSlash: true,
   })
@@ -64,7 +64,7 @@ export class Config {
   @IsNotEmpty()
   readonly frontendResetPasswordUrl!: string;
 
-  @Env('PORT', { expose: true, defaultValue: 4050 })
+  @Env('PORT', { expose: true, defaultValue: 4060 })
   readonly port!: number;
 
   @Env('RESEND_API_KEY')

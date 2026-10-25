@@ -28,7 +28,7 @@ The CLI puts `shadow-xs`/`shadow-sm` on inputs, textareas and cards. [`DESIGN.md
 
 ### The app is already running
 
-Assume the dev servers are up. If something is listening on the app's ports, that is this application: use it. Don't start a second instance, don't restart it, don't run `pnpm dev`.
+Assume the dev servers are up (frontend `http://127.0.0.1:3060`, API `http://127.0.0.1:4060`, Postgres 5434 — the Togena project runs next to this one on 3050 / 4050 / 5433; never mix them up). If something is listening on the app's ports, that is this application: use it. Don't start a second instance, don't restart it, don't run `pnpm dev`.
 
 Don't reach for the browser to check your own work. Tests and type-checks are the evidence; open the running app when asked to, not on your own initiative.
 

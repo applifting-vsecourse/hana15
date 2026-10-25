@@ -20,7 +20,7 @@ In the project directory, you can run:
 
 ### `pnpm dev`
 
-Runs the app in the development mode.\ Open [http://localhost:3050](http://localhost:3050) to view it in the browser.
+Runs the app in the development mode.\ Open [http://127.0.0.1:3060](http://127.0.0.1:3060) to view it in the browser.
 
 The page will reload if you make edits.\ You will also see any lint errors in the console.
 
