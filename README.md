@@ -23,13 +23,13 @@ pnpm dev
 
 | What               | Where                                                |
 | ------------------ | ---------------------------------------------------- |
-| Frontend           | http://localhost:3050                                |
-| API                | http://localhost:4050/api                            |
-| API docs (Swagger) | http://localhost:4050/api/docs                       |
-| Auth API docs      | http://localhost:4050/api/auth/reference             |
+| Frontend           | http://127.0.0.1:3060                                |
+| API                | http://127.0.0.1:4060/api                            |
+| API docs (Swagger) | http://127.0.0.1:4060/api/docs                       |
+| Auth API docs      | http://127.0.0.1:4060/api/auth/reference             |
 | DB browser         | `pnpm backend prisma:studio` → http://localhost:5555 |
 
-The ports are deliberately odd — 3050, 4050, and Postgres on 5433 rather than the usual 3000, 4000 and 5432 — so the stack doesn't fight whatever else you have running. They're pinned rather than auto-incremented: the API only accepts requests from the frontend's exact origin, so a port that silently moved would surface as an unexplained CORS error.
+The ports are deliberately odd — 3060, 4060, and Postgres on 5434 rather than the usual 3000, 4000 and 5432 — so the stack does not fight whatever else you have running (the sister project Togena uses 3050 / 4050 / 5433). The app is served on `127.0.0.1`, not `localhost`: browsers share cookies between ports on one host, so two BetterAuth apps on `localhost` would keep logging each other out. They're pinned rather than auto-incremented: the API only accepts requests from the frontend's exact origin, so a port that silently moved would surface as an unexplained CORS error.
 
 ### Seeded users
 
@@ -78,9 +78,9 @@ Two things worth knowing:
 | Symptom                                                  | Cause / fix                                                                                                                                                                          |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pnpm dev` fails immediately, Docker errors              | Docker Desktop isn't running. Start it and retry.                                                                                                                                    |
-| `Port 3050 is already in use`                            | Another app has it. Stop it — the port is pinned on purpose, because the API only accepts requests from `http://localhost:3050`.                                                     |
+| `Port 3060 is already in use`                            | Another app has it. Stop it — the port is pinned on purpose, because the API only accepts requests from `http://127.0.0.1:3060`.                                                     |
 | Page loads but login fails, console shows a CORS error   | The frontend is on a different port than the API expects. See above.                                                                                                                 |
-| `EADDRINUSE :::4050`                                     | An old backend is still running: `lsof -i :4050` then kill the process.                                                                                                              |
+| `EADDRINUSE :::4060`                                     | An old backend is still running: `lsof -i :4060` then kill the process.                                                                                                              |
 | Prisma: "column does not exist" after editing the schema | You changed `schema.prisma` without migrating: `pnpm backend prisma:migrations:run`.                                                                                                 |
 | Want the demo data back / a clean database               | `pnpm backend db:reset` — it replays the migrations and re-runs the seed. (Plain `pnpm backend seed` does **not** wipe an existing database; it skips when users are already there.) |
 | A commit is blocked by lint or formatting                | The pre-commit hook auto-fixes what it can; fix the rest, or `git commit --no-verify` to bypass it once.                                                                             |
