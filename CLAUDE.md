@@ -46,6 +46,10 @@ Prisma's `contains` / `startsWith` / `endsWith` don't escape `%`, `_` or `\`, so
 
 In `onSettled` / `onSuccess`, don't return the promise from `invalidateQueries`. The mutation would stay pending until the list has reloaded, so a failed save shows its error late — or not at all while the server is down. Call it with `void`.
 
+### Permissions are checked on the server
+
+Who may do something is decided in the service (or a guard), from the role and id in the session — never from the UI and never from a request parameter. The UI only hides what the server would refuse anyway. Every such rule needs a service unit test and an e2e test that fails when the server check is removed.
+
 ### Migrations and the dev database
 
 The dev database can be ahead of the repo (a migration from another branch). Then `prisma migrate dev` refuses to run and offers a reset. Write the migration by hand and apply it with `pnpm backend migrate`. Never run `db:reset` or `migrate reset` unless asked to.
