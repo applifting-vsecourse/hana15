@@ -1,3 +1,7 @@
+# Explicit name: the project must not depend on the folder name, and must not
+# collide with another clone of this starter (Togena uses `togena`, port 5433).
+name: quacker
+
 services:
   db:
     image: postgres:17-alpine
@@ -7,7 +11,7 @@ services:
       POSTGRES_PASSWORD: quacker
       POSTGRES_DB: quacker
     ports:
-      - 5433:5432
+      - 5434:5432
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U quacker -d quacker']
       interval: 3s

@@ -27,7 +27,8 @@ export default defineConfig(({ mode }) => {
     // Vite 8 resolves tsconfig `paths` (the `@/` alias) natively.
     resolve: { tsconfigPaths: true },
     server: {
-      port: 3050,
+      port: 3060,
+      host: "127.0.0.1",
       // Fail loudly instead of silently moving to 3001, which the backend's
       // CORS allow-list would then reject with an opaque browser error.
       strictPort: true,
