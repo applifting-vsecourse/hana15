@@ -1,5 +1,6 @@
 import { PrismaService } from '@/core/prisma/prisma.service';
 import { User } from '@/generated/prisma/client';
+import { Quack } from '@/modules/quack/domain/quack';
 import { BetterAuth } from '@/shared/auth/providers/better-auth.provider';
 import { Config } from '@/shared/config/config.service';
 import { createQuack } from './create-quack';
@@ -164,11 +165,66 @@ Please stop tagging me.`,
 
   const now = Date.now();
 
+  const created: Quack[] = [];
   for (const { author, minutesAgo, text } of exampleQuacks) {
+    created.push(
+      await createQuack(prisma, {
+        text,
+        userId: author.id,
+        createdAt: new Date(now - minutesAgo * MINUTE_IN_MS),
+      }),
+    );
+  }
+
+  console.log('Creating example replies');
+
+  const at = (minutesAgo: number): Date =>
+    new Date(now - minutesAgo * MINUTE_IN_MS);
+  const [, , , , , , , , , , crumbQuack, swanQuack] = created;
+  const heronQuack = created[0];
+
+  // One reply (singular count), then a thread with a reply to a reply
+  // (the "in reply to" line), then a longer thread (5+ replies).
+  await createQuack(prisma, {
+    text: 'Is the heron at least licensed?',
+    userId: breadCritic.id,
+    createdAt: at(2800),
+    replyTo: heronQuack,
+  });
+
+  const firstCrumbReply = await createQuack(prisma, {
+    text: 'i was there. it was loud and also beautiful.',
+    userId: deepDuckThoughts.id,
+    createdAt: at(90),
+    replyTo: crumbQuack,
+  });
+  await createQuack(prisma, {
+    text: 'Did anyone get the crumb, or just the glory?',
+    userId: migrationSeason.id,
+    createdAt: at(80),
+    replyTo: crumbQuack,
+  });
+  await createQuack(prisma, {
+    text: 'only the glory. the crumb sank.',
+    userId: caffeinatedDuck.id,
+    createdAt: at(70),
+    replyTo: firstCrumbReply,
+  });
+
+  const swanReplies = [
+    { author: breadCritic, text: 'What did the swan say?', minutesAgo: 18 },
+    { author: caffeinatedDuck, text: 'nothing. it hissed.', minutesAgo: 16 },
+    { author: migrationSeason, text: 'Classic swan.', minutesAgo: 14 },
+    { author: deepDuckThoughts, text: 'Is a hiss a reply?', minutesAgo: 12 },
+    { author: breadCritic, text: 'Only if it is well baked.', minutesAgo: 10 },
+    { author: caffeinatedDuck, text: 'ok that one was good', minutesAgo: 8 },
+  ];
+  for (const { author, text, minutesAgo } of swanReplies) {
     await createQuack(prisma, {
       text,
       userId: author.id,
-      createdAt: new Date(now - minutesAgo * MINUTE_IN_MS),
+      createdAt: at(minutesAgo),
+      replyTo: swanQuack,
     });
   }
 };

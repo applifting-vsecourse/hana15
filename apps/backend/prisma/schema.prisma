@@ -40,11 +40,24 @@ model Quack {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  // Replies are quacks too. A root quack has both fields empty; a reply points
+  // at its root (threadId, set on insert and never changed) and at the quack
+  // or reply it answers (replyToId). Restrict: a row with replies can't be
+  // deleted physically by accident (see ADR 0001).
+  thread    Quack?   @relation("QuackThread", fields: [threadId], references: [id], onDelete: Restrict)
+  threadId  String?
+  replies   Quack[]  @relation("QuackThread")
+  replyTo   Quack?   @relation("QuackReplyTo", fields: [replyToId], references: [id], onDelete: Restrict)
+  replyToId String?
+  reactions Quack[]  @relation("QuackReplyTo")
+
   // A quack with options is a poll; without options it is a plain quack.
   pollOptions PollOption[]
   pollVotes   PollVote[]
 
   @@index([userId])
+  @@index([threadId, createdAt])
+  @@index([replyToId])
   @@map("quack")
 }
 

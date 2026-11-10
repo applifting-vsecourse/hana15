@@ -1,6 +1,6 @@
 import { PrismaService } from '@/core/prisma/prisma.service';
 import { Prisma } from '@/generated/prisma/client';
-import { Mood, Poll, Quack } from '@/modules/quack/domain/quack';
+import { Mood, Poll, Quack, QuackAuthor } from '@/modules/quack/domain/quack';
 import { Injectable } from '@nestjs/common';
 
 // Options with their vote count, plus the requesting user's own vote (if any).
@@ -35,24 +35,36 @@ const mapPollToDomain = (options: PrismaPollOptions): Poll | null =>
           options.find((option) => option.votes.length > 0)?.id ?? null,
       };
 
-const mapPrismaQuackToDomain = (
-  quack: Prisma.QuackGetPayload<{ include: { user: true } }> & {
-    pollOptions: PrismaPollOptions;
-  },
-): Quack => ({
+type PrismaQuackWithRelations = Prisma.QuackGetPayload<{
+  include: { user: true };
+}> & {
+  pollOptions: PrismaPollOptions;
+  replyTo?: Prisma.QuackGetPayload<{ include: { user: true } }> | null;
+  _count?: { replies: number };
+};
+
+const toAuthor = (user: {
+  id: string;
+  name: string;
+  username: string | null;
+}): QuackAuthor => ({
+  id: user.id,
+  name: user.name,
+  username: user.username ?? '',
+});
+
+const mapPrismaQuackToDomain = (quack: PrismaQuackWithRelations): Quack => ({
   id: quack.id,
   text: quack.text,
   mood: quack.mood,
   userId: quack.userId,
   createdAt: quack.createdAt,
   updatedAt: quack.updatedAt,
-  user: quack.user
-    ? {
-        id: quack.user.id,
-        name: quack.user.name,
-        username: quack.user.username ?? '',
-      }
-    : undefined,
+  user: quack.user ? toAuthor(quack.user) : undefined,
+  threadId: quack.threadId,
+  replyToId: quack.replyToId,
+  replyToUser: quack.replyTo?.user ? toAuthor(quack.replyTo.user) : null,
+  replyCount: quack._count?.replies ?? 0,
   poll: mapPollToDomain(quack.pollOptions),
 });
 
@@ -77,8 +89,10 @@ export class QuackRepository {
     filter?: { words?: string[]; authorId?: string },
   ): Promise<Quack[]> {
     const quacks = await this.prisma.quack.findMany({
+      // Replies show up only under their quack, never in the feed.
       where: filter
         ? {
+            threadId: null,
             userId: filter.authorId,
             AND: (filter.words ?? []).map(escapeLike).map((word) => ({
               OR: [
@@ -91,11 +105,75 @@ export class QuackRepository {
               ],
             })),
           }
-        : undefined,
-      include: { user: true, pollOptions: pollOptionsInclude(viewerId) },
+        : { threadId: null },
+      include: {
+        user: true,
+        pollOptions: pollOptionsInclude(viewerId),
+        _count: { select: { replies: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
     return quacks.map(mapPrismaQuackToDomain);
+  }
+
+  /** Replies of one thread, oldest first. */
+  async getReplies(threadId: string, viewerId: string): Promise<Quack[]> {
+    const replies = await this.prisma.quack.findMany({
+      where: { threadId },
+      include: {
+        user: true,
+        pollOptions: pollOptionsInclude(viewerId),
+        replyTo: { include: { user: true } },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    return replies.map(mapPrismaQuackToDomain);
+  }
+
+  async getQuackRef(
+    id: string,
+  ): Promise<{ id: string; threadId: string | null } | null> {
+    return this.prisma.quack.findUnique({
+      where: { id },
+      select: { id: true, threadId: true },
+    });
+  }
+
+  /**
+   * Stores a reply. Returns null when the answered quack no longer exists
+   * (deleted between the lookup and the insert).
+   */
+  async createReply(data: {
+    text: string;
+    userId: string;
+    threadId: string;
+    replyToId: string;
+  }): Promise<Quack | null> {
+    try {
+      const reply = await this.prisma.quack.create({
+        data,
+        include: {
+          user: true,
+          pollOptions: pollOptionsInclude(data.userId),
+          replyTo: { include: { user: true } },
+        },
+      });
+      return mapPrismaQuackToDomain(reply);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async countReactions(id: string): Promise<number> {
+    return this.prisma.quack.count({
+      where: { OR: [{ threadId: id }, { replyToId: id }] },
+    });
   }
 
   async createQuack(createQuackData: {

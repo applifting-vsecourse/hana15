@@ -3,6 +3,7 @@ import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -74,6 +75,37 @@ export class QuacksService {
     return quack;
   }
 
+  /** Replies of a quack, oldest first. */
+  async getReplies(user: Identity, quackId: string): Promise<Quack[]> {
+    const target = await this.quackRepository.getQuackRef(quackId);
+    if (!target) throw new NotFoundException('Quack not found');
+    // Replies always hang off the root quack, whichever reply is asked about.
+    return this.quackRepository.getReplies(
+      target.threadId ?? target.id,
+      user.id,
+    );
+  }
+
+  /** Replies to a quack or to a reply; the author comes from the session. */
+  async createReply(
+    user: Identity,
+    targetId: string,
+    text: string,
+  ): Promise<Quack> {
+    const target = await this.quackRepository.getQuackRef(targetId);
+    if (!target) throw new NotFoundException('Quack not found');
+
+    const reply = await this.quackRepository.createReply({
+      text,
+      userId: user.id,
+      // The thread is fixed here, from the target, and never changes later.
+      threadId: target.threadId ?? target.id,
+      replyToId: target.id,
+    });
+    if (!reply) throw new NotFoundException('Quack not found');
+    return reply;
+  }
+
   async vote(user: Identity, quackId: string, optionId: string): Promise<Poll> {
     const poll = await this.quackRepository.vote({
       quackId,
@@ -96,6 +128,11 @@ export class QuacksService {
     // The role comes from the session, never from the request.
     if (ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You can only delete your own quacks');
+    }
+    // Until a deleted row can stay as a placeholder (delete-with-replies), a
+    // quack that others answered must not take their replies with it.
+    if ((await this.quackRepository.countReactions(quackId)) > 0) {
+      throw new ConflictException('Others have replied to this post');
     }
     await this.quackRepository.deleteQuack(quackId);
   }

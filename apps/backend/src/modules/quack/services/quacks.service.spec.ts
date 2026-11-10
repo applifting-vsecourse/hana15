@@ -5,6 +5,7 @@ import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Logger,
   NotFoundException,
@@ -21,6 +22,10 @@ const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   updatedAt: new Date('2026-01-01T12:00:00Z'),
   user: { id: 'u1', name: 'Caffeinated Duck', username: 'CaffeinatedDuck' },
   poll: null,
+  threadId: null,
+  replyToId: null,
+  replyToUser: null,
+  replyCount: 0,
   ...overrides,
 });
 
@@ -264,6 +269,129 @@ describe('QuacksService', () => {
         new QuacksService(repository).deleteQuack(user, 'nope'),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(repository.deleteQuack).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('replies', () => {
+    it('replying to a root quack makes that quack the thread', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackRef.mockResolvedValue({ id: 'q1', threadId: null });
+      repository.createReply.mockResolvedValue(aQuack({ id: 'r1' }));
+
+      await new QuacksService(repository).createReply(user, 'q1', 'hi');
+
+      expect(repository.createReply).toHaveBeenCalledWith({
+        text: 'hi',
+        userId: 'u1',
+        threadId: 'q1',
+        replyToId: 'q1',
+      });
+    });
+
+    it('replying to a reply keeps the root as the thread (flat list)', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackRef.mockResolvedValue({ id: 'r1', threadId: 'q1' });
+      repository.createReply.mockResolvedValue(aQuack({ id: 'r2' }));
+
+      await new QuacksService(repository).createReply(user, 'r1', 'hi');
+
+      expect(repository.createReply).toHaveBeenCalledWith({
+        text: 'hi',
+        userId: 'u1',
+        threadId: 'q1',
+        replyToId: 'r1',
+      });
+    });
+
+    it('takes the author from the session', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackRef.mockResolvedValue({ id: 'q1', threadId: null });
+      repository.createReply.mockResolvedValue(aQuack());
+
+      await new QuacksService(repository).createReply(
+        { id: 'session-user' } as Identity,
+        'q1',
+        'hi',
+      );
+
+      expect(repository.createReply).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'session-user' }),
+      );
+    });
+
+    it('refuses a reply to a quack that does not exist', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackRef.mockResolvedValue(null);
+
+      await expect(
+        new QuacksService(repository).createReply(user, 'nope', 'hi'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(repository.createReply).not.toHaveBeenCalled();
+    });
+
+    it('refuses a reply when the quack is deleted during the insert', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackRef.mockResolvedValue({ id: 'q1', threadId: null });
+      repository.createReply.mockResolvedValue(null);
+
+      await expect(
+        new QuacksService(repository).createReply(user, 'q1', 'hi'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('lists the replies of the root quack, also when asked via a reply', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackRef.mockResolvedValue({ id: 'r1', threadId: 'q1' });
+      repository.getReplies.mockResolvedValue([]);
+
+      await new QuacksService(repository).getReplies(user, 'r1');
+
+      expect(repository.getReplies).toHaveBeenCalledWith('q1', 'u1');
+    });
+
+    it('reports replies of a missing quack', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackRef.mockResolvedValue(null);
+
+      await expect(
+        new QuacksService(repository).getReplies(user, 'nope'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    describe('deleting a reply', () => {
+      it("refuses someone else's reply", async () => {
+        const repository = mock<QuackRepository>();
+        repository.getQuackOwnerId.mockResolvedValue('other');
+
+        await expect(
+          new QuacksService(repository).deleteQuack(user, 'r1'),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+        expect(repository.deleteQuack).not.toHaveBeenCalled();
+      });
+
+      it("lets a moderator delete someone else's reply", async () => {
+        const repository = mock<QuackRepository>();
+        repository.getQuackOwnerId.mockResolvedValue('other');
+        repository.countReactions.mockResolvedValue(0);
+
+        await new QuacksService(repository).deleteQuack(
+          { id: 'u2', role: 'admin' } as Identity,
+          'r1',
+        );
+
+        expect(repository.deleteQuack).toHaveBeenCalledWith('r1');
+      });
+
+      it('does not delete a post that others replied to', async () => {
+        const repository = mock<QuackRepository>();
+        repository.getQuackOwnerId.mockResolvedValue('u1');
+        repository.countReactions.mockResolvedValue(2);
+
+        await expect(
+          new QuacksService(repository).deleteQuack(user, 'q1'),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect(repository.deleteQuack).not.toHaveBeenCalled();
+      });
     });
   });
 });
