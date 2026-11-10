@@ -1,10 +1,16 @@
 // Example component test — the pattern to copy for your own components.
+import type { ReactElement } from "react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import type { Quack } from "@/features/quack/api/quackSchemas"
 import { QuackList } from "@/features/quack/components/QuackList"
+
+// Quack items use query hooks (replies), so they need a client.
+const renderWithClient = (ui: ReactElement) =>
+  render(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>)
 
 const quack = (overrides: Partial<Quack> = {}): Quack => ({
   id: "q1",
@@ -14,12 +20,16 @@ const quack = (overrides: Partial<Quack> = {}): Quack => ({
   createdAt: new Date("2026-01-01T12:00:00Z"),
   user: { id: "u1", name: "Caffeinated Duck", username: "CaffeinatedDuck" },
   poll: null,
+  threadId: null,
+  replyToId: null,
+  replyToUser: null,
+  replyCount: 0,
   ...overrides,
 })
 
 describe("QuackList", () => {
   it("renders quacks with author info", () => {
-    render(<QuackList quacks={[quack()]} />)
+    renderWithClient(<QuackList quacks={[quack()]} />)
 
     expect(screen.getByText("quack quack")).toBeInTheDocument()
     expect(screen.getByText("Caffeinated Duck")).toBeInTheDocument()
@@ -27,13 +37,13 @@ describe("QuackList", () => {
   })
 
   it("shows the mood of a quack that has one", () => {
-    render(<QuackList quacks={[quack({ mood: "angry" })]} />)
+    renderWithClient(<QuackList quacks={[quack({ mood: "angry" })]} />)
 
     expect(screen.getByText("Angry")).toBeInTheDocument()
   })
 
   it("shows no mood for a quack without one", () => {
-    render(<QuackList quacks={[quack()]} />)
+    renderWithClient(<QuackList quacks={[quack()]} />)
 
     for (const label of ["Happy", "Sad", "Angry", "Silly"]) {
       expect(screen.queryByText(label)).not.toBeInTheDocument()
@@ -41,13 +51,13 @@ describe("QuackList", () => {
   })
 
   it("says there are no quacks yet when the feed is empty", () => {
-    render(<QuackList quacks={[]} />)
+    renderWithClient(<QuackList quacks={[]} />)
 
     expect(screen.getByText("No quacks yet. Post the first one.")).toBeInTheDocument()
   })
 
   it("shows a custom empty message, e.g. for a search without matches", () => {
-    render(
+    renderWithClient(
       <QuackList
         quacks={[]}
         emptyMessage="No quacks match “bread”"
@@ -59,7 +69,7 @@ describe("QuackList", () => {
 
   it("shows an error with a working reload button", async () => {
     const onReload = vi.fn()
-    render(
+    renderWithClient(
       <QuackList
         quacks={[]}
         error={new Error("Server unreachable")}

@@ -2,15 +2,27 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { formatDate } from "@/lib/date"
 
 import type { Quack } from "@/features/quack/api/quackSchemas"
-import { DeleteQuackButton } from "@/features/quack/components/DeleteQuackButton"
 import { QuackMood } from "@/features/quack/components/QuackMood"
 import { QuackPoll } from "@/features/quack/components/QuackPoll"
+import { QuackReplies } from "@/features/quack/components/QuackReplies"
 import { UsersName } from "@/features/quack/components/UsersName"
 import { UsersUserName } from "@/features/quack/components/UsersUserName"
 
-type QuackItemProps = { quack: Quack; canDelete?: boolean }
+type QuackItemProps = {
+  quack: Quack
+  canDelete?: boolean
+  currentUserId?: string
+  isModerator?: boolean
+  canReply?: boolean
+}
 
-export function QuackItem({ quack, canDelete }: QuackItemProps) {
+export function QuackItem({
+  quack,
+  canDelete,
+  currentUserId,
+  isModerator,
+  canReply = true,
+}: QuackItemProps) {
   const { name, username } = quack.user
 
   const initials = name
@@ -47,11 +59,13 @@ export function QuackItem({ quack, canDelete }: QuackItemProps) {
             poll={quack.poll}
           />
         ) : null}
-        {canDelete ? (
-          <div className="flex justify-end">
-            <DeleteQuackButton quackId={quack.id} />
-          </div>
-        ) : null}
+        <QuackReplies
+          quack={quack}
+          currentUserId={currentUserId}
+          isModerator={isModerator}
+          canDelete={canDelete}
+          canReply={canReply}
+        />
       </div>
     </article>
   )

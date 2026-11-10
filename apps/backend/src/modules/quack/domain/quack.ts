@@ -32,6 +32,14 @@ export type Quack = {
   createdAt: Date;
   updatedAt: Date;
   user?: QuackAuthor;
+  /** Root quack of the thread; null for a root quack itself. */
+  threadId: string | null;
+  /** The quack or reply this one answers; null for a root quack. */
+  replyToId: string | null;
+  /** Author of the answered quack or reply (replies only). */
+  replyToUser: QuackAuthor | null;
+  /** Number of replies in the thread (root quacks only). */
+  replyCount: number;
   /** Present when the quack has options to vote on. */
   poll: Poll | null;
 };

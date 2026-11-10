@@ -28,6 +28,10 @@ const quack = (pollValue: Poll | null): Quack => ({
   createdAt: new Date("2026-01-01T12:00:00Z"),
   user: { id: "u1", name: "Caffeinated Duck", username: "CaffeinatedDuck" },
   poll: pollValue,
+  threadId: null,
+  replyToId: null,
+  replyToUser: null,
+  replyCount: 0,
 })
 
 // What the "server" returns when the feed is refetched after a vote.
@@ -41,7 +45,12 @@ function Feed() {
     queryFn: () => Promise.resolve(feedFromServer),
     staleTime: Infinity,
   })
-  return data?.[0] ? <QuackItem quack={data[0]} /> : null
+  return data?.[0] ? (
+    <QuackItem
+      quack={data[0]}
+      canReply={false}
+    />
+  ) : null
 }
 
 function renderFeedItem(initial: Quack) {

@@ -24,6 +24,10 @@ const SAMPLE_QUACKS: Quack[] = [
     userId: "sample-user-1",
     createdAt: new Date("2026-09-22T09:12:00"),
     poll: null,
+    threadId: null,
+    replyToId: null,
+    replyToUser: null,
+    replyCount: 0,
     user: { id: "sample-user-1", name: "Caffeinated Duck", username: "CaffeinatedDuck" },
   },
   {
@@ -33,6 +37,10 @@ const SAMPLE_QUACKS: Quack[] = [
     userId: "sample-user-2",
     createdAt: new Date("2026-09-22T08:40:00"),
     poll: null,
+    threadId: null,
+    replyToId: null,
+    replyToUser: null,
+    replyCount: 0,
     user: { id: "sample-user-2", name: "Deep Duck Thoughts", username: "DeepDuckThoughts" },
   },
 ]
@@ -97,6 +105,7 @@ function LandingPage() {
           <div className="rounded-xl border border-border bg-card px-5 py-2">
             {SAMPLE_QUACKS.map((quack) => (
               <QuackItem
+                canReply={false}
                 key={quack.id}
                 quack={quack}
               />

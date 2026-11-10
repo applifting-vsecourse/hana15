@@ -23,6 +23,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateQuackDto } from './dto/create-quack.dto';
+import { CreateReplyDto } from './dto/create-reply.dto';
 import { ListQuacksDto } from './dto/list-quacks.dto';
 import { PollResponseDto, QuackResponseDto } from './dto/quack.response.dto';
 import { VotePollDto } from './dto/vote-poll.dto';
@@ -74,6 +75,35 @@ export class QuacksController {
     return QuackResponseDto.fromDomain(quack);
   }
 
+  @Get(':id/replies')
+  @ApiOperation({ summary: 'List the replies of a quack, oldest first' })
+  @ApiResponse({ status: 200, type: [QuackResponseDto] })
+  @ApiResponse({ status: 401, description: 'Not signed in' })
+  @ApiResponse({ status: 404, description: 'No such quack' })
+  async listReplies(
+    @User() user: Identity,
+    @Param('id') id: string,
+  ): Promise<QuackResponseDto[]> {
+    const replies = await this.quacksService.getReplies(user, id);
+    return replies.map(QuackResponseDto.fromDomain);
+  }
+
+  @Post(':id/replies')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Reply to a quack or to another reply' })
+  @ApiResponse({ status: 201, type: QuackResponseDto })
+  @ApiResponse({ status: 400, description: 'Empty or too long text' })
+  @ApiResponse({ status: 401, description: 'Not signed in' })
+  @ApiResponse({ status: 404, description: 'The answered quack is gone' })
+  async reply(
+    @User() user: Identity,
+    @Param('id') id: string,
+    @Body() body: CreateReplyDto,
+  ): Promise<QuackResponseDto> {
+    const reply = await this.quacksService.createReply(user, id, body.text);
+    return QuackResponseDto.fromDomain(reply);
+  }
+
   @Post(':id/vote')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -103,6 +133,10 @@ export class QuacksController {
     description: "Not the quack's author or a moderator",
   })
   @ApiResponse({ status: 404, description: 'No such quack' })
+  @ApiResponse({
+    status: 409,
+    description: 'Someone replied to it (see delete-with-replies story)',
+  })
   async remove(@User() user: Identity, @Param('id') id: string): Promise<void> {
     await this.quacksService.deleteQuack(user, id);
   }
