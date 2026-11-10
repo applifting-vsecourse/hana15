@@ -32,24 +32,27 @@ enum Mood {
 }
 
 model Quack {
-  id        String   @id @default(cuid())
-  text      String   @db.Text
+  id        String    @id @default(cuid())
+  // text, mood and userId are all empty exactly when deletedAt is set: a
+  // deleted quack that others replied to stays as a placeholder (ADR 0001).
+  text      String?   @db.Text
   mood      Mood?
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
 
   // Replies are quacks too. A root quack has both fields empty; a reply points
   // at its root (threadId, set on insert and never changed) and at the quack
   // or reply it answers (replyToId). Restrict: a row with replies can't be
   // deleted physically by accident (see ADR 0001).
-  thread    Quack?   @relation("QuackThread", fields: [threadId], references: [id], onDelete: Restrict)
+  thread    Quack?  @relation("QuackThread", fields: [threadId], references: [id], onDelete: Restrict)
   threadId  String?
-  replies   Quack[]  @relation("QuackThread")
-  replyTo   Quack?   @relation("QuackReplyTo", fields: [replyToId], references: [id], onDelete: Restrict)
+  replies   Quack[] @relation("QuackThread")
+  replyTo   Quack?  @relation("QuackReplyTo", fields: [replyToId], references: [id], onDelete: Restrict)
   replyToId String?
-  reactions Quack[]  @relation("QuackReplyTo")
+  reactions Quack[] @relation("QuackReplyTo")
 
   // A quack with options is a poll; without options it is a plain quack.
   pollOptions PollOption[]
@@ -155,8 +158,8 @@ model User {
   username        String? @db.VarChar(50)
   displayUsername String? @db.VarChar(50)
 
-  bio             String? @db.VarChar(160)
-  defaultMood     Mood?
+  bio         String? @db.VarChar(160)
+  defaultMood Mood?
 
   @@unique([email])
   @@unique([username])
