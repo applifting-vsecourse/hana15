@@ -16,6 +16,8 @@ type QuackListProps = {
   emptyAction?: ReactNode
   currentUserId?: string
   isModerator?: boolean
+  // False on the signed-out landing page, where replying makes no sense.
+  canReply?: boolean
 }
 
 export function QuackList({
@@ -27,6 +29,7 @@ export function QuackList({
   emptyAction,
   currentUserId,
   isModerator,
+  canReply = true,
 }: QuackListProps) {
   return (
     <div className="flex flex-col">
@@ -70,6 +73,9 @@ export function QuackList({
           key={quack.id}
           quack={quack}
           canDelete={isModerator === true || currentUserId === quack.userId}
+          currentUserId={currentUserId}
+          isModerator={isModerator}
+          canReply={canReply}
         />
       ))}
     </div>

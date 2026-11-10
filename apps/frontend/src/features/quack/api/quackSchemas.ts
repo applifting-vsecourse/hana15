@@ -31,6 +31,12 @@ export const quackSchema = z.object({
   createdAt: z.coerce.date(),
   user: quackUserSchema,
   poll: pollSchema.nullable(),
+  // Replies are quacks too: a root quack has threadId and replyToId null.
+  threadId: z.string().nullable(),
+  replyToId: z.string().nullable(),
+  // Set only when answering another reply (the "v odpovědi na" line).
+  replyToUser: quackUserSchema.nullable(),
+  replyCount: z.number(),
 })
 
 export const quacksSchema = z.array(quackSchema)
