@@ -25,17 +25,22 @@ export type Poll = z.infer<typeof pollSchema>
 
 export const quackSchema = z.object({
   id: z.string(),
-  text: z.string(),
+  // A deleted quack that others replied to stays as a placeholder: the server
+  // sends no text, mood, poll or author for it.
+  deleted: z.boolean(),
+  text: z.string().nullable(),
   mood: moodSchema.nullable(),
-  userId: z.string(),
+  userId: z.string().nullable(),
   createdAt: z.coerce.date(),
-  user: quackUserSchema,
+  user: quackUserSchema.nullable(),
   poll: pollSchema.nullable(),
   // Replies are quacks too: a root quack has threadId and replyToId null.
   threadId: z.string().nullable(),
   replyToId: z.string().nullable(),
   // Set only when answering another reply (the "v odpovědi na" line).
   replyToUser: quackUserSchema.nullable(),
+  // The reply it answers was deleted.
+  replyToDeleted: z.boolean(),
   replyCount: z.number(),
 })
 
