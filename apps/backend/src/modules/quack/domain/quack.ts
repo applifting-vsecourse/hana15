@@ -26,9 +26,11 @@ export type Poll = {
 
 export type Quack = {
   id: string;
-  text: string;
+  /** Empty for a deleted quack (placeholder row). */
+  text: string | null;
   mood: Mood | null;
-  userId: string;
+  /** Empty for a deleted quack: its author is not stored any more. */
+  userId: string | null;
   createdAt: Date;
   updatedAt: Date;
   user?: QuackAuthor;
@@ -38,7 +40,11 @@ export type Quack = {
   replyToId: string | null;
   /** Author of the answered quack or reply (replies only). */
   replyToUser: QuackAuthor | null;
-  /** Number of replies in the thread (root quacks only). */
+  /** A deleted quack that others replied to; it carries no content or author. */
+  deleted: boolean;
+  /** The answered reply was deleted (replies only). */
+  replyToDeleted: boolean;
+  /** Number of replies in the thread (root quacks only), deleted ones not counted. */
   replyCount: number;
   /** Present when the quack has options to vote on. */
   poll: Poll | null;

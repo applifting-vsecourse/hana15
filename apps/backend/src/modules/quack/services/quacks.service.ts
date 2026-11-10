@@ -3,7 +3,6 @@ import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -93,7 +92,9 @@ export class QuacksService {
     text: string,
   ): Promise<Quack> {
     const target = await this.quackRepository.getQuackRef(targetId);
-    if (!target) throw new NotFoundException('Quack not found');
+    if (!target || target.deleted) {
+      throw new NotFoundException('Quack not found');
+    }
 
     const reply = await this.quackRepository.createReply({
       text,
@@ -120,20 +121,17 @@ export class QuacksService {
   }
 
   async deleteQuack(user: Identity, quackId: string): Promise<void> {
-    const ownerId = await this.quackRepository.getQuackOwnerId(quackId);
-    if (ownerId === null) {
+    const quack = await this.quackRepository.getQuackOwner(quackId);
+    // A placeholder has no content left to delete.
+    if (!quack || quack.deleted) {
       throw new NotFoundException('Quack not found');
     }
     // The permission check lives here, not in the UI: the API is callable directly.
     // The role comes from the session, never from the request.
-    if (ownerId !== user.id && user.role !== 'admin') {
+    if (quack.userId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('You can only delete your own quacks');
     }
-    // Until a deleted row can stay as a placeholder (delete-with-replies), a
-    // quack that others answered must not take their replies with it.
-    if ((await this.quackRepository.countReactions(quackId)) > 0) {
-      throw new ConflictException('Others have replied to this post');
-    }
+    // Physical delete or placeholder is decided by the repository (ADR 0001).
     await this.quackRepository.deleteQuack(quackId);
   }
 }

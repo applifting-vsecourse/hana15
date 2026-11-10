@@ -53,20 +53,39 @@ const toAuthor = (user: {
   username: user.username ?? '',
 });
 
-const mapPrismaQuackToDomain = (quack: PrismaQuackWithRelations): Quack => ({
-  id: quack.id,
-  text: quack.text,
-  mood: quack.mood,
-  userId: quack.userId,
-  createdAt: quack.createdAt,
-  updatedAt: quack.updatedAt,
-  user: quack.user ? toAuthor(quack.user) : undefined,
-  threadId: quack.threadId,
-  replyToId: quack.replyToId,
-  replyToUser: quack.replyTo?.user ? toAuthor(quack.replyTo.user) : null,
-  replyCount: quack._count?.replies ?? 0,
-  poll: mapPollToDomain(quack.pollOptions),
-});
+const mapPrismaQuackToDomain = (quack: PrismaQuackWithRelations): Quack => {
+  const base = {
+    id: quack.id,
+    createdAt: quack.createdAt,
+    updatedAt: quack.updatedAt,
+    threadId: quack.threadId,
+    replyToId: quack.replyToId,
+    replyToUser: quack.replyTo?.user ? toAuthor(quack.replyTo.user) : null,
+    replyToDeleted: quack.replyTo?.deletedAt != null,
+    replyCount: quack._count?.replies ?? 0,
+  };
+  // A deleted quack never exposes content, whatever is left in the row.
+  if (quack.deletedAt) {
+    return {
+      ...base,
+      text: null,
+      mood: null,
+      userId: null,
+      user: undefined,
+      poll: null,
+      deleted: true,
+    };
+  }
+  return {
+    ...base,
+    text: quack.text,
+    mood: quack.mood,
+    userId: quack.userId,
+    user: quack.user ? toAuthor(quack.user) : undefined,
+    poll: mapPollToDomain(quack.pollOptions),
+    deleted: false,
+  };
+};
 
 // Prisma's `contains` becomes a LIKE pattern without escaping, so a typed
 // `%` or `_` would act as a wildcard and match everything.
@@ -109,7 +128,7 @@ export class QuackRepository {
       include: {
         user: true,
         pollOptions: pollOptionsInclude(viewerId),
-        _count: { select: { replies: true } },
+        _count: { select: { replies: { where: { deletedAt: null } } } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -132,11 +151,14 @@ export class QuackRepository {
 
   async getQuackRef(
     id: string,
-  ): Promise<{ id: string; threadId: string | null } | null> {
-    return this.prisma.quack.findUnique({
+  ): Promise<{ id: string; threadId: string | null; deleted: boolean } | null> {
+    const quack = await this.prisma.quack.findUnique({
       where: { id },
-      select: { id: true, threadId: true },
+      select: { id: true, threadId: true, deletedAt: true },
     });
+    return quack
+      ? { id: quack.id, threadId: quack.threadId, deleted: !!quack.deletedAt }
+      : null;
   }
 
   /**
@@ -238,15 +260,49 @@ export class QuackRepository {
     return this.getPoll(data.quackId, data.userId);
   }
 
-  async getQuackOwnerId(id: string): Promise<string | null> {
+  async getQuackOwner(
+    id: string,
+  ): Promise<{ userId: string | null; deleted: boolean } | null> {
     const quack = await this.prisma.quack.findUnique({
       where: { id },
-      select: { userId: true },
+      select: { userId: true, deletedAt: true },
     });
-    return quack?.userId ?? null;
+    return quack ? { userId: quack.userId, deleted: !!quack.deletedAt } : null;
   }
 
+  /**
+   * Deletes a quack for good when nobody reacted to it. Otherwise the row
+   * stays as an empty placeholder so the reactions keep their place (ADR 0001).
+   * Deleting something that is already gone is not an error.
+   */
   async deleteQuack(id: string): Promise<void> {
-    await this.prisma.quack.delete({ where: { id } });
+    if ((await this.countReactions(id)) === 0) {
+      try {
+        await this.prisma.quack.delete({ where: { id } });
+        return;
+      } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+          throw error;
+        }
+        // Already deleted by someone else.
+        if (error.code === 'P2025') return;
+        // A reply arrived after the count (foreign key is Restrict): fall
+        // through and keep the row as a placeholder.
+        if (error.code !== 'P2003') throw error;
+      }
+    }
+    await this.blankOut(id);
+  }
+
+  // Cascade doesn't fire because the row stays, so votes and options go by hand.
+  private async blankOut(id: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.pollVote.deleteMany({ where: { quackId: id } }),
+      this.prisma.pollOption.deleteMany({ where: { quackId: id } }),
+      this.prisma.quack.updateMany({
+        where: { id, deletedAt: null },
+        data: { text: null, mood: null, userId: null, deletedAt: new Date() },
+      }),
+    ]);
   }
 }

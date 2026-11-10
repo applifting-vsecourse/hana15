@@ -124,7 +124,8 @@ export class QuacksController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: 'Delete one of your own quacks (a moderator can delete any)',
+    summary:
+      'Delete one of your own quacks (a moderator can delete any). With replies it stays as an empty placeholder.',
   })
   @ApiResponse({ status: 204, description: 'Deleted' })
   @ApiResponse({ status: 401, description: 'Not signed in' })
@@ -133,10 +134,6 @@ export class QuacksController {
     description: "Not the quack's author or a moderator",
   })
   @ApiResponse({ status: 404, description: 'No such quack' })
-  @ApiResponse({
-    status: 409,
-    description: 'Someone replied to it (see delete-with-replies story)',
-  })
   async remove(@User() user: Identity, @Param('id') id: string): Promise<void> {
     await this.quacksService.deleteQuack(user, id);
   }

@@ -46,20 +46,26 @@ export class QuackResponseDto {
   @ApiProperty()
   id!: string;
 
-  @ApiProperty()
-  text!: string;
+  @ApiProperty({
+    type: Boolean,
+    description: 'Deleted quack that others replied to: no content, no author',
+  })
+  deleted!: boolean;
+
+  @ApiProperty({ type: String, nullable: true })
+  text!: string | null;
 
   @ApiProperty({ enum: MOODS, nullable: true, type: String })
   mood!: Mood | null;
 
-  @ApiProperty()
-  userId!: string;
+  @ApiProperty({ type: String, nullable: true })
+  userId!: string | null;
 
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt!: Date;
 
-  @ApiProperty({ type: QuackUserDto })
-  user!: QuackUserDto;
+  @ApiProperty({ type: QuackUserDto, nullable: true })
+  user!: QuackUserDto | null;
 
   @ApiProperty({ type: PollResponseDto, nullable: true })
   poll!: PollResponseDto | null;
@@ -85,33 +91,57 @@ export class QuackResponseDto {
   })
   replyToUser!: QuackUserDto | null;
 
+  @ApiProperty({ description: 'The answered reply was deleted' })
+  replyToDeleted!: boolean;
+
   @ApiProperty({ description: 'Number of replies under this quack' })
   replyCount!: number;
 
   static fromDomain(quack: Quack): QuackResponseDto {
+    // Only the fields below leave the server for a deleted quack.
+    const common = {
+      id: quack.id,
+      createdAt: quack.createdAt,
+      threadId: quack.threadId,
+      replyToId: quack.replyToId,
+      replyToDeleted: quack.replyToDeleted,
+      replyCount: quack.replyCount,
+    };
+    // Only a reply to another reply says who it answers; a reply straight
+    // to the quack has no "in reply to" line.
+    const replyToUser = (
+      quack.replyToId !== quack.threadId ? quack.replyToUser : null
+    ) as QuackUserDto | null;
+
+    if (quack.deleted) {
+      return {
+        ...common,
+        deleted: true,
+        text: null,
+        mood: null,
+        userId: null,
+        user: null,
+        poll: null,
+        replyToUser,
+      };
+    }
     if (!quack.user) {
       throw new Error(
         `QuackResponseDto.fromDomain expected quack.user to be loaded for quack ${quack.id}`,
       );
     }
     return {
-      id: quack.id,
+      ...common,
+      deleted: false,
       text: quack.text,
       mood: quack.mood,
       userId: quack.userId,
-      createdAt: quack.createdAt,
       user: {
         id: quack.user.id,
         name: quack.user.name,
         username: quack.user.username,
       },
-      threadId: quack.threadId,
-      replyToId: quack.replyToId,
-      // Only a reply to another reply says who it answers; a reply straight
-      // to the quack has no "in reply to" line.
-      replyToUser:
-        quack.replyToId !== quack.threadId ? quack.replyToUser : null,
-      replyCount: quack.replyCount,
+      replyToUser,
       poll: quack.poll ? PollResponseDto.fromDomain(quack.poll) : null,
     };
   }
