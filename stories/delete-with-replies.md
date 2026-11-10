@@ -4,6 +4,8 @@
 **chci**, aby smazání quacku (nebo odpovědi), na který už někdo reagoval, smazalo jeho obsah, ale nechalo zachované reakce ostatních,
 **abych** nikoho nepřipravil o to, co napsal, a zároveň aby opravdu zmizelo to, co jsem smazat chtěl.
 
+Kdo smí quack nebo odpověď smazat a jak (stejný endpoint, stejné potvrzení) určují [Mazání vlastních příspěvků](delete-own-quacks.md), [Moderátor smaže jakýkoli příspěvek](moderator-delete.md) a pro odpovědi [Odpověď na quack](replies.md). Tato story na tom nic nemění.
+
 Závisí na [Odpověď na quack](replies.md) a navazuje na [Mazání vlastních příspěvků](delete-own-quacks.md) a [Moderátor smaže jakýkoli příspěvek](moderator-delete.md).
 
 ## Akceptační kritéria
@@ -30,19 +32,14 @@ Závisí na [Odpověď na quack](replies.md) a navazuje na [Mazání vlastních 
 9. Po smazání není text smazaného quacku, jeho nálada, anketa ani hlasy v odpovědi API ani nikde v aplikaci. Platí to i po obnovení stránky a pro moderátora.
 10. Autor smazaného obsahu se nedá zjistit z odpovědi API ani z aplikace.
 
-**Oprávnění**
-
-11. Quack a odpověď smaže autor nebo moderátor, nikdo jiný, ani přímým voláním API.
-12. Smazání provede stejný endpoint a stejné potvrzení jako dnes. Moderátor má stejný výsledek jako autor.
-
 **Když něco nejde**
 
-13. Když smazání selže, quack (nebo odpověď) zůstane se vším obsahem a uživatel uvidí _Příspěvek se nepodařilo smazat._
-14. Když příspěvek mezitím smazal někdo jiný, zmizí nebo se změní podle kritérií výše a bez chyby.
+11. Když smazání selže, quack (nebo odpověď) zůstane se vším obsahem a uživatel uvidí _Příspěvek se nepodařilo smazat._
+12. Když příspěvek mezitím smazal někdo jiný, zmizí nebo se změní podle kritérií výše a bez chyby.
 
 **Když není co ukázat**
 
-15. Feed, ve kterém je jen smazaný řádek s odpověďmi, vypadá normálně: řádek v něm je a odpovědi jsou rozbalitelné. Žádný zvláštní prázdný stav.
+13. Feed, ve kterém je jen smazaný řádek s odpověďmi, vypadá normálně: řádek v něm je a odpovědi jsou rozbalitelné. Žádný zvláštní prázdný stav.
 
 ## Mimo rozsah
 
