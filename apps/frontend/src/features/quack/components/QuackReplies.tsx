@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -37,9 +37,14 @@ export function QuackReplies({
   const repliesQuery = useQuery({ ...repliesQueryOptions(quack.id), enabled: isExpanded })
   const replies = repliesQuery.data ?? []
 
-  const sent = () => {
+  // The reply to scroll to once it shows up in the list (it is appended at
+  // the end, which can be far below the form the user just used).
+  const [scrollToId, setScrollToId] = useState<string | null>(null)
+
+  const sent = (reply: Quack) => {
     setReplyingToId(null)
     setIsExpanded(true)
+    setScrollToId(reply.id)
   }
 
   if (!canReply) return null
@@ -102,6 +107,8 @@ export function QuackReplies({
               isReplying={replyingToId === reply.id}
               onToggleReply={() => setReplyingToId(replyingToId === reply.id ? null : reply.id)}
               onSent={sent}
+              shouldScrollTo={scrollToId === reply.id}
+              onScrolled={() => setScrollToId(null)}
             />
           ))}
         </div>
@@ -115,10 +122,29 @@ type ReplyItemProps = {
   canDelete: boolean
   isReplying: boolean
   onToggleReply: () => void
-  onSent: () => void
+  onSent: (reply: Quack) => void
+  shouldScrollTo: boolean
+  onScrolled: () => void
 }
 
-function ReplyItem({ reply, canDelete, isReplying, onToggleReply, onSent }: ReplyItemProps) {
+function ReplyItem({
+  reply,
+  canDelete,
+  isReplying,
+  onToggleReply,
+  onSent,
+  shouldScrollTo,
+  onScrolled,
+}: ReplyItemProps) {
+  const ref = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!shouldScrollTo) return
+    // "nearest": scroll only as far as needed, and not at all if already visible.
+    ref.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" })
+    onScrolled()
+  }, [shouldScrollTo, onScrolled])
+
   const initials = reply.user.name
     .split(" ")
     .map((word) => word[0])
@@ -127,7 +153,10 @@ function ReplyItem({ reply, canDelete, isReplying, onToggleReply, onSent }: Repl
     .toUpperCase()
 
   return (
-    <article className="flex gap-3">
+    <article
+      ref={ref}
+      className="flex gap-3"
+    >
       <Avatar className="size-8">
         <AvatarFallback className="text-xs">{initials}</AvatarFallback>
       </Avatar>

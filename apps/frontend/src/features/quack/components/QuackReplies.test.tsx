@@ -143,6 +143,26 @@ describe("replies under a quack", () => {
     expect(await screen.findByText("text of r9")).toBeInTheDocument()
   })
 
+  it("smoothly scrolls the new reply into view after sending", async () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    vi.mocked(addReply).mockResolvedValue(reply("r2", 1))
+    serverReplies["quacks/q1/replies"] = [reply("r1", 2), reply("r2", 1)]
+    renderItem(quack({ replyCount: 1 }))
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole("button", { name: "1 odpověď" }))
+    const first = (await screen.findByText("text of r1")).closest("article")!
+    await user.click(within(first).getByRole("button", { name: "Odpovědět" }))
+    await user.type(screen.getByLabelText("Vaše odpověď"), "hi")
+    await user.click(screen.getByRole("button", { name: "Odeslat" }))
+
+    await screen.findByText("text of r2")
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1))
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" })
+    expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByText("text of r2").closest("article"))
+  })
+
   it("replying to a reply targets that reply", async () => {
     vi.mocked(addReply).mockResolvedValue(reply("r2", 1))
     serverReplies["quacks/q1/replies"] = [reply("r1", 2)]

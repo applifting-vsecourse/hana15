@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { HTTPError } from "@/lib/api-client"
 
+import type { Quack } from "@/features/quack/api/quackSchemas"
 import { useAddReply } from "@/features/quack/hooks/useAddReply"
 
 // Same limit as a quack (the server validates independently).
@@ -18,7 +19,8 @@ const FAILED_MESSAGE = "Odpověď se nepodařilo odeslat."
 type ReplyFormProps = {
   // The quack or reply being answered.
   targetId: string
-  onSent: () => void
+  // Gets the stored reply, so the list can bring it into view.
+  onSent: (reply: Quack) => void
   onCancel: () => void
 }
 
@@ -44,9 +46,9 @@ export function ReplyForm({ targetId, onSent, onCancel }: ReplyFormProps) {
     addReply.mutate(
       { targetId, text: trimmed },
       {
-        onSuccess: () => {
+        onSuccess: (reply) => {
           setText("")
-          onSent()
+          onSent(reply)
         },
       },
     )
