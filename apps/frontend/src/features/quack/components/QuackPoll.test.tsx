@@ -31,6 +31,8 @@ const quack = (pollValue: Poll | null): Quack => ({
   threadId: null,
   replyToId: null,
   replyToUser: null,
+  replyToDeleted: false,
+  deleted: false,
   replyCount: 0,
 })
 

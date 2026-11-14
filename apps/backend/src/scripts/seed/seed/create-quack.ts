@@ -34,5 +34,12 @@ export async function createQuack(
       },
     },
   });
-  return { ...quack, replyToUser: null, replyCount: 0, poll: null };
+  return {
+    ...quack,
+    replyToUser: null,
+    replyToDeleted: false,
+    deleted: false,
+    replyCount: 0,
+    poll: null,
+  };
 }

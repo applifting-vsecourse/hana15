@@ -53,13 +53,15 @@ export function QuackReplies({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setReplyingToId(replyingToId === quack.id ? null : quack.id)}
-          >
-            Odpovědět
-          </Button>
+          {quack.deleted ? null : (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setReplyingToId(replyingToId === quack.id ? null : quack.id)}
+            >
+              Odpovědět
+            </Button>
+          )}
           {quack.replyCount > 0 ? (
             <Button
               variant="ghost"
@@ -71,7 +73,7 @@ export function QuackReplies({
             </Button>
           ) : null}
         </div>
-        {canDelete ? <DeleteQuackButton quackId={quack.id} /> : null}
+        {canDelete && !quack.deleted ? <DeleteQuackButton quackId={quack.id} /> : null}
       </div>
 
       {replyingToId === quack.id ? (
@@ -145,6 +147,17 @@ function ReplyItem({
     onScrolled()
   }, [shouldScrollTo, onScrolled])
 
+  if (reply.deleted || !reply.user) {
+    return (
+      <article
+        ref={ref}
+        className="flex flex-col gap-1"
+      >
+        <p className="text-sm text-muted-foreground">Odpověď byla smazána</p>
+      </article>
+    )
+  }
+
   const initials = reply.user.name
     .split(" ")
     .map((word) => word[0])
@@ -168,7 +181,9 @@ function ReplyItem({
           <span className="text-xs text-muted-foreground">·</span>
           <time className="text-xs text-muted-foreground">{formatDate(reply.createdAt)}</time>
         </div>
-        {reply.replyToUser ? (
+        {reply.replyToDeleted ? (
+          <p className="text-xs text-muted-foreground">v odpovědi na smazanou odpověď</p>
+        ) : reply.replyToUser ? (
           <p className="text-xs text-muted-foreground">
             v odpovědi na @{reply.replyToUser.username}
           </p>

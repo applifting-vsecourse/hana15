@@ -23,6 +23,8 @@ const quack = (overrides: Partial<Quack> = {}): Quack => ({
   threadId: null,
   replyToId: null,
   replyToUser: null,
+  replyToDeleted: false,
+  deleted: false,
   replyCount: 0,
   ...overrides,
 })

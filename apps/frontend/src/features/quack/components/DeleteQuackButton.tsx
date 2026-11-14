@@ -45,7 +45,7 @@ export function DeleteQuackButton({ quackId }: DeleteQuackButtonProps) {
         </DialogHeader>
         {deleteQuack.error ? (
           <Alert variant="destructive">
-            <AlertDescription>{deleteQuack.error.message}</AlertDescription>
+            <AlertDescription>Příspěvek se nepodařilo smazat.</AlertDescription>
           </Alert>
         ) : null}
         <DialogFooter>

@@ -23,6 +23,20 @@ export function QuackItem({
   isModerator,
   canReply = true,
 }: QuackItemProps) {
+  if (quack.deleted || !quack.user) {
+    return (
+      <article className="flex w-full flex-col gap-2 border-b border-border pt-2 pb-4 last:border-b-0">
+        <p className="text-sm text-muted-foreground">Quack byl smazán</p>
+        <QuackReplies
+          quack={quack}
+          currentUserId={currentUserId}
+          isModerator={isModerator}
+          canReply={canReply}
+        />
+      </article>
+    )
+  }
+
   const { name, username } = quack.user
 
   const initials = name

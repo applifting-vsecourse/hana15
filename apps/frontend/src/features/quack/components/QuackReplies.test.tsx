@@ -31,6 +31,8 @@ const quack = (overrides: Partial<Quack> = {}): Quack => ({
   threadId: null,
   replyToId: null,
   replyToUser: null,
+  replyToDeleted: false,
+  deleted: false,
   replyCount: 0,
   ...overrides,
 })
@@ -237,5 +239,45 @@ describe("replies under a quack", () => {
       expect(await deleteButtonIn("text of r1")).toHaveLength(1)
       expect(await deleteButtonIn("text of r2")).toHaveLength(1)
     })
+  })
+})
+
+describe("deleted quacks and replies", () => {
+  const deletedQuack = (overrides: Partial<Quack> = {}) =>
+    quack({
+      deleted: true,
+      text: null,
+      userId: null,
+      user: null,
+      replyCount: 2,
+      ...overrides,
+    })
+
+  it("shows a grey line without author or actions, but keeps the replies expandable", async () => {
+    serverReplies["quacks/q1/replies"] = [reply("r1", 2), reply("r2", 3)]
+    renderItem(deletedQuack(), { currentUserId: "u1", isModerator: true })
+    const user = userEvent.setup()
+
+    expect(screen.getByText("Quack byl smazán")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Odpovědět" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "2 odpovědi" }))
+    expect(await screen.findByText("text of r1")).toBeInTheDocument()
+    expect(screen.getByText("Duck 3")).toBeInTheDocument()
+  })
+
+  it("shows a deleted reply as a line without text, author or actions", async () => {
+    serverReplies["quacks/q1/replies"] = [
+      reply("r1", 2, { deleted: true, text: null, userId: null, user: null }),
+      reply("r2", 3, { replyToId: "r1", replyToDeleted: true }),
+    ]
+    renderItem(quack({ replyCount: 1 }), { currentUserId: "u2", isModerator: true })
+    await userEvent.setup().click(screen.getByRole("button", { name: "1 odpověď" }))
+
+    expect(await screen.findByText("Odpověď byla smazána")).toBeInTheDocument()
+    expect(screen.getByText("v odpovědi na smazanou odpověď")).toBeInTheDocument()
+    const line = screen.getByText("Odpověď byla smazána").closest("article")!
+    expect(within(line).queryByRole("button")).not.toBeInTheDocument()
   })
 })
