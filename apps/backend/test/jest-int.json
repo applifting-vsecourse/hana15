@@ -1,0 +1,25 @@
+{
+  "rootDir": "..",
+  "moduleFileExtensions": ["js", "mjs", "json", "ts", "tsx"],
+  "testRegex": "\\.int-spec\\.ts$",
+  "transform": {
+    "^.+\\.(t|j|mj)sx?$": [
+      "ts-jest",
+      {
+        "tsconfig": "<rootDir>/test/tsconfig.json",
+        "diagnostics": false
+      }
+    ]
+  },
+  "transformIgnorePatterns": [
+    "node_modules/(?!.*(better-auth|better-call|better-fetch|nanostores|jose|noble|defu|rou3|kysely|zod))"
+  ],
+  "testEnvironment": "node",
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/src/$1"
+  },
+  "setupFiles": ["<rootDir>/test/setup-env.ts"],
+  "globalSetup": "<rootDir>/test/global-setup.ts",
+  "maxWorkers": 1,
+  "testTimeout": 30000
+}

@@ -50,3 +50,124 @@ jobs:
 
       - name: Build frontend
         run: pnpm frontend build
+
+  test-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: quacker
+          POSTGRES_PASSWORD: quacker
+          POSTGRES_DB: quacker_test
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U quacker -d quacker_test"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://quacker:quacker@localhost:5434/quacker_test
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm backend prisma:generate
+
+      # The suite applies the Prisma migrations to quacker_test itself.
+      - name: Integration tests
+        run: pnpm backend test:int
+
+  test-e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: quacker
+          POSTGRES_PASSWORD: quacker
+          POSTGRES_DB: quacker
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U quacker -d quacker"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Creates .env files from .env.example: localhost:5434 database,
+      # backend on 4060, frontend on 3060, the seeded accounts the tests use.
+      - name: Create env files
+        run: pnpm env:check
+
+      - name: Generate Prisma client
+        run: pnpm backend prisma:generate
+
+      - name: Migrate and seed database
+        run: |
+          pnpm backend migrate
+          pnpm backend seed
+
+      - name: Install Playwright browser
+        run: pnpm frontend exec playwright install --with-deps chromium
+
+      - name: Start backend and frontend
+        run: |
+          pnpm backend start > backend.log 2>&1 &
+          pnpm frontend dev > frontend.log 2>&1 &
+          for url in http://127.0.0.1:4060/api/docs http://127.0.0.1:3060; do
+            for i in $(seq 1 90); do
+              curl -sf -o /dev/null "$url" && break
+              sleep 2
+            done
+            curl -sf -o /dev/null "$url" || { echo "$url did not start"; cat backend.log frontend.log; exit 1; }
+          done
+
+      - name: Playwright tests
+        run: pnpm frontend e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            apps/frontend/test-results
+            backend.log
+            frontend.log
+
+  # Advisory: shows red on the PR when a test file loses or rewrites lines, but
+  # nothing depends on it (no `needs`) - keep it out of the required checks.
+  test-changes:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Compare test files with the base branch
+        run: scripts/check-test-changes.sh "origin/${{ github.base_ref }}"

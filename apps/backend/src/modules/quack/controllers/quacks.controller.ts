@@ -11,6 +11,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
   Query,
   UseGuards,
   UsePipes,
@@ -25,7 +26,11 @@ import {
 import { CreateQuackDto } from './dto/create-quack.dto';
 import { CreateReplyDto } from './dto/create-reply.dto';
 import { ListQuacksDto } from './dto/list-quacks.dto';
-import { PollResponseDto, QuackResponseDto } from './dto/quack.response.dto';
+import {
+  LikeStateResponseDto,
+  PollResponseDto,
+  QuackResponseDto,
+} from './dto/quack.response.dto';
 import { VotePollDto } from './dto/vote-poll.dto';
 
 @ApiTags('quacks')
@@ -119,6 +124,31 @@ export class QuacksController {
   ): Promise<PollResponseDto> {
     const poll = await this.quacksService.vote(user, id, body.optionId);
     return PollResponseDto.fromDomain(poll);
+  }
+
+  @Put(':id/like')
+  @ApiOperation({ summary: 'Like a quack (stub, ADR 0002)' })
+  @ApiResponse({ status: 200, type: LikeStateResponseDto })
+  @ApiResponse({ status: 401, description: 'Not signed in' })
+  @ApiResponse({ status: 404, description: 'No such quack' })
+  like(
+    @User() user: Identity,
+    @Param('id') id: string,
+  ): Promise<LikeStateResponseDto> {
+    return this.quacksService.like(user, id);
+  }
+
+  @Delete(':id/like')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Take your like back (stub, ADR 0002)' })
+  @ApiResponse({ status: 200, type: LikeStateResponseDto })
+  @ApiResponse({ status: 401, description: 'Not signed in' })
+  @ApiResponse({ status: 404, description: 'No such quack' })
+  unlike(
+    @User() user: Identity,
+    @Param('id') id: string,
+  ): Promise<LikeStateResponseDto> {
+    return this.quacksService.unlike(user, id);
   }
 
   @Delete(':id')

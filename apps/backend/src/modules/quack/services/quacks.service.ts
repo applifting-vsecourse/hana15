@@ -1,4 +1,4 @@
-import { Mood, Poll, Quack } from '@/modules/quack/domain/quack';
+import { LikeState, Mood, Poll, Quack } from '@/modules/quack/domain/quack';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
 import {
@@ -118,6 +118,24 @@ export class QuacksService {
     }
     this.logger.log(`Poll vote: userId=${user.id} pollId=${quackId}`);
     return poll;
+  }
+
+  async like(user: Identity, quackId: string): Promise<LikeState> {
+    await this.requireLiveQuack(quackId);
+    // The user comes from the session, never from the request.
+    await this.quackRepository.addLike({ quackId, userId: user.id });
+    return this.quackRepository.getLikeState(quackId, user.id);
+  }
+
+  async unlike(user: Identity, quackId: string): Promise<LikeState> {
+    await this.requireLiveQuack(quackId);
+    await this.quackRepository.removeLike({ quackId, userId: user.id });
+    return this.quackRepository.getLikeState(quackId, user.id);
+  }
+
+  private async requireLiveQuack(quackId: string): Promise<void> {
+    const quack = await this.quackRepository.getQuackRef(quackId);
+    if (!quack || quack.deleted) throw new NotFoundException('Quack not found');
   }
 
   async deleteQuack(user: Identity, quackId: string): Promise<void> {

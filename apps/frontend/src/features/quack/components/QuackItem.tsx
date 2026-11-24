@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { formatDate } from "@/lib/date"
 
 import type { Quack } from "@/features/quack/api/quackSchemas"
+import { LikeButton } from "@/features/quack/components/LikeButton"
 import { QuackMood } from "@/features/quack/components/QuackMood"
 import { QuackPoll } from "@/features/quack/components/QuackPoll"
 import { QuackReplies } from "@/features/quack/components/QuackReplies"
@@ -73,6 +74,9 @@ export function QuackItem({
             poll={quack.poll}
           />
         ) : null}
+        <div>
+          <LikeButton quack={quack} />
+        </div>
         <QuackReplies
           quack={quack}
           currentUserId={currentUserId}
