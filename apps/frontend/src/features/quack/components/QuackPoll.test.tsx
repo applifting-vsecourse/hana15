@@ -120,7 +120,10 @@ describe("QuackPoll", () => {
   it("renders no poll for a plain quack", () => {
     renderFeedItem(quack(null))
 
-    expect(screen.queryByRole("button")).not.toBeInTheDocument()
+    // The like button (ADR 0002) is the only button a plain quack has.
+    expect(
+      screen.getAllByRole("button").map((button) => button.getAttribute("aria-label")),
+    ).toEqual(["Líbí se mi"])
     expect(screen.queryByText(/vote/i)).not.toBeInTheDocument()
   })
 
