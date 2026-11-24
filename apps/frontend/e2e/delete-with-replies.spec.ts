@@ -106,7 +106,7 @@ test.describe("deleting posts that others replied to", () => {
     await author.reload()
     const quack = author.getByRole("article").filter({ hasText: text })
     // 3 replies were written, 1 deleted without reactions and 1 as a line: 2 count.
-    await quack.getByRole("button", { name: "3 odpovědi" }).click()
+    await quack.getByRole("button", { name: "2 odpovědi" }).click()
     await expect(quack.getByText("Odpověď byla smazána")).toBeVisible()
     await expect(quack.getByText("answered reply")).toHaveCount(0)
     await expect(quack.getByText("lonely reply")).toHaveCount(0)
