@@ -120,16 +120,22 @@ export class QuacksService {
     return poll;
   }
 
-  /** Stub (ADR 0002). */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  like(_user: Identity, _quackId: string): Promise<LikeState> {
-    return Promise.reject(new Error('not implemented'));
+  async like(user: Identity, quackId: string): Promise<LikeState> {
+    await this.requireLiveQuack(quackId);
+    // The user comes from the session, never from the request.
+    await this.quackRepository.addLike({ quackId, userId: user.id });
+    return this.quackRepository.getLikeState(quackId, user.id);
   }
 
-  /** Stub (ADR 0002). */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  unlike(_user: Identity, _quackId: string): Promise<LikeState> {
-    return Promise.reject(new Error('not implemented'));
+  async unlike(user: Identity, quackId: string): Promise<LikeState> {
+    await this.requireLiveQuack(quackId);
+    await this.quackRepository.removeLike({ quackId, userId: user.id });
+    return this.quackRepository.getLikeState(quackId, user.id);
+  }
+
+  private async requireLiveQuack(quackId: string): Promise<void> {
+    const quack = await this.quackRepository.getQuackRef(quackId);
+    if (!quack || quack.deleted) throw new NotFoundException('Quack not found');
   }
 
   async deleteQuack(user: Identity, quackId: string): Promise<void> {

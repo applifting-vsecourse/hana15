@@ -42,6 +42,9 @@ export const quackSchema = z.object({
   // The reply it answers was deleted.
   replyToDeleted: z.boolean(),
   replyCount: z.number(),
+  // Absent on a placeholder row (ADR 0002).
+  likeCount: z.number().optional(),
+  likedByMe: z.boolean().optional(),
 })
 
 export const quacksSchema = z.array(quackSchema)

@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/date"
 import type { Quack } from "@/features/quack/api/quackSchemas"
 import { repliesQueryOptions } from "@/features/quack/api/repliesQueryOptions"
 import { DeleteQuackButton } from "@/features/quack/components/DeleteQuackButton"
+import { LikeButton } from "@/features/quack/components/LikeButton"
 import { replyCountLabel } from "@/features/quack/components/replyCount"
 import { ReplyForm } from "@/features/quack/components/ReplyForm"
 import { UsersName } from "@/features/quack/components/UsersName"
@@ -190,13 +191,16 @@ function ReplyItem({
         ) : null}
         <p className="text-sm break-words whitespace-pre-line">{reply.text}</p>
         <div className="flex items-center justify-between gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleReply}
-          >
-            Odpovědět
-          </Button>
+          <div className="flex items-center gap-2">
+            <LikeButton quack={reply} />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleReply}
+            >
+              Odpovědět
+            </Button>
+          </div>
           {canDelete ? <DeleteQuackButton quackId={reply.id} /> : null}
         </div>
         {isReplying ? (

@@ -157,6 +157,8 @@ export class QuackResponseDto {
       },
       replyToUser,
       poll: quack.poll ? PollResponseDto.fromDomain(quack.poll) : null,
+      likeCount: quack.likeCount,
+      likedByMe: quack.likedByMe,
     };
   }
 }

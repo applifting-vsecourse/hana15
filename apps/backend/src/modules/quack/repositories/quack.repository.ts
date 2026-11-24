@@ -41,12 +41,21 @@ const mapPollToDomain = (options: PrismaPollOptions): Poll | null =>
           options.find((option) => option.votes.length > 0)?.id ?? null,
       };
 
+// Like count plus the viewer's own like (ADR 0002). Never the list of likers.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+const likesInclude = (userId: string) =>
+  ({
+    where: { userId },
+    select: { id: true },
+  }) satisfies Prisma.Quack$likesArgs;
+
 type PrismaQuackWithRelations = Prisma.QuackGetPayload<{
   include: { user: true };
 }> & {
   pollOptions: PrismaPollOptions;
+  likes?: { id: string }[];
   replyTo?: Prisma.QuackGetPayload<{ include: { user: true } }> | null;
-  _count?: { replies: number };
+  _count?: { replies?: number; likes?: number };
 };
 
 const toAuthor = (user: {
@@ -89,6 +98,8 @@ const mapPrismaQuackToDomain = (quack: PrismaQuackWithRelations): Quack => {
     userId: quack.userId,
     user: quack.user ? toAuthor(quack.user) : undefined,
     poll: mapPollToDomain(quack.pollOptions),
+    likeCount: quack._count?.likes ?? 0,
+    likedByMe: (quack.likes?.length ?? 0) > 0,
     deleted: false,
   };
 };
@@ -134,7 +145,10 @@ export class QuackRepository {
       include: {
         user: true,
         pollOptions: pollOptionsInclude(viewerId),
-        _count: { select: { replies: { where: { deletedAt: null } } } },
+        likes: likesInclude(viewerId),
+        _count: {
+          select: { replies: { where: { deletedAt: null } }, likes: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -148,6 +162,8 @@ export class QuackRepository {
       include: {
         user: true,
         pollOptions: pollOptionsInclude(viewerId),
+        likes: likesInclude(viewerId),
+        _count: { select: { likes: true } },
         replyTo: { include: { user: true } },
       },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
@@ -183,6 +199,8 @@ export class QuackRepository {
         include: {
           user: true,
           pollOptions: pollOptionsInclude(data.userId),
+          likes: likesInclude(data.userId),
+          _count: { select: { likes: true } },
           replyTo: { include: { user: true } },
         },
       });
@@ -227,6 +245,8 @@ export class QuackRepository {
       include: {
         user: true,
         pollOptions: pollOptionsInclude(createQuackData.userId),
+        likes: likesInclude(createQuackData.userId),
+        _count: { select: { likes: true } },
       },
     });
     return mapPrismaQuackToDomain(quack);
@@ -266,22 +286,26 @@ export class QuackRepository {
     return this.getPoll(data.quackId, data.userId);
   }
 
-  /** Stub (ADR 0002): inserts the like, ignoring a duplicate. */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  addLike(_data: { quackId: string; userId: string }): Promise<void> {
-    return Promise.reject(new Error('not implemented'));
+  /** Inserts the like; the unique (quackId, userId) index skips a duplicate. */
+  async addLike(data: { quackId: string; userId: string }): Promise<void> {
+    await this.prisma.quackLike.createMany({
+      data: [data],
+      skipDuplicates: true,
+    });
   }
 
-  /** Stub (ADR 0002): removes the like if there is one. */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  removeLike(_data: { quackId: string; userId: string }): Promise<void> {
-    return Promise.reject(new Error('not implemented'));
+  /** Removes the like if there is one. */
+  async removeLike(data: { quackId: string; userId: string }): Promise<void> {
+    await this.prisma.quackLike.deleteMany({ where: data });
   }
 
-  /** Stub (ADR 0002): the count and the viewer's own like. */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getLikeState(_quackId: string, _userId: string): Promise<LikeState> {
-    return Promise.reject(new Error('not implemented'));
+  /** The count and the viewer's own like. */
+  async getLikeState(quackId: string, userId: string): Promise<LikeState> {
+    const [likeCount, mine] = await Promise.all([
+      this.prisma.quackLike.count({ where: { quackId } }),
+      this.prisma.quackLike.count({ where: { quackId, userId } }),
+    ]);
+    return { likeCount, likedByMe: mine > 0 };
   }
 
   async getQuackOwner(
@@ -318,9 +342,10 @@ export class QuackRepository {
     await this.blankOut(id);
   }
 
-  // Cascade doesn't fire because the row stays, so votes and options go by hand.
+  // Cascade doesn't fire because the row stays, so likes, votes and options go by hand.
   private async blankOut(id: string): Promise<void> {
     await this.prisma.$transaction([
+      this.prisma.quackLike.deleteMany({ where: { quackId: id } }),
       this.prisma.pollVote.deleteMany({ where: { quackId: id } }),
       this.prisma.pollOption.deleteMany({ where: { quackId: id } }),
       this.prisma.quack.updateMany({
