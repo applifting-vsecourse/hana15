@@ -42,6 +42,14 @@ export class PollResponseDto {
   }
 }
 
+export class LikeStateResponseDto {
+  @ApiProperty()
+  likeCount!: number;
+
+  @ApiProperty()
+  likedByMe!: boolean;
+}
+
 export class QuackResponseDto {
   @ApiProperty()
   id!: string;
@@ -96,6 +104,12 @@ export class QuackResponseDto {
 
   @ApiProperty({ description: 'Number of replies under this quack' })
   replyCount!: number;
+
+  @ApiProperty({ required: false, description: 'Absent on a deleted quack' })
+  likeCount?: number;
+
+  @ApiProperty({ required: false, description: 'Absent on a deleted quack' })
+  likedByMe?: boolean;
 
   static fromDomain(quack: Quack): QuackResponseDto {
     // Only the fields below leave the server for a deleted quack.

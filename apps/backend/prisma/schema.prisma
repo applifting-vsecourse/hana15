@@ -57,6 +57,7 @@ model Quack {
   // A quack with options is a poll; without options it is a plain quack.
   pollOptions PollOption[]
   pollVotes   PollVote[]
+  likes       QuackLike[]
 
   @@index([userId])
   @@index([threadId, createdAt])
@@ -91,6 +92,19 @@ model PollVote {
   @@unique([quackId, userId])
   @@index([optionId])
   @@map("poll_vote")
+}
+
+model QuackLike {
+  id        String   @id @default(cuid())
+  quack     Quack    @relation(fields: [quackId], references: [id], onDelete: Cascade)
+  quackId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  // One person, one like per quack: enforced by the database (ADR 0002).
+  @@unique([quackId, userId])
+  @@map("quack_like")
 }
 
 model Session {
@@ -153,6 +167,7 @@ model User {
   accounts      Account[]
   quacks        Quack[]
   pollVotes     PollVote[]
+  quackLikes    QuackLike[]
   role          UserRole   @default(user)
 
   username        String? @db.VarChar(50)

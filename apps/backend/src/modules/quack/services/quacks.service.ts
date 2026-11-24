@@ -1,4 +1,4 @@
-import { Mood, Poll, Quack } from '@/modules/quack/domain/quack';
+import { LikeState, Mood, Poll, Quack } from '@/modules/quack/domain/quack';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
 import {
@@ -118,6 +118,18 @@ export class QuacksService {
     }
     this.logger.log(`Poll vote: userId=${user.id} pollId=${quackId}`);
     return poll;
+  }
+
+  /** Stub (ADR 0002). */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  like(_user: Identity, _quackId: string): Promise<LikeState> {
+    return Promise.reject(new Error('not implemented'));
+  }
+
+  /** Stub (ADR 0002). */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  unlike(_user: Identity, _quackId: string): Promise<LikeState> {
+    return Promise.reject(new Error('not implemented'));
   }
 
   async deleteQuack(user: Identity, quackId: string): Promise<void> {

@@ -48,4 +48,10 @@ export type Quack = {
   replyCount: number;
   /** Present when the quack has options to vote on. */
   poll: Poll | null;
+  /** Likes on this quack; absent on a deleted quack (ADR 0002). */
+  likeCount?: number;
+  /** The requesting user liked it; absent on a deleted quack. */
+  likedByMe?: boolean;
 };
+
+export type LikeState = { likeCount: number; likedByMe: boolean };

@@ -1,6 +1,12 @@
 import { PrismaService } from '@/core/prisma/prisma.service';
 import { Prisma } from '@/generated/prisma/client';
-import { Mood, Poll, Quack, QuackAuthor } from '@/modules/quack/domain/quack';
+import {
+  LikeState,
+  Mood,
+  Poll,
+  Quack,
+  QuackAuthor,
+} from '@/modules/quack/domain/quack';
 import { Injectable } from '@nestjs/common';
 
 // Options with their vote count, plus the requesting user's own vote (if any).
@@ -258,6 +264,24 @@ export class QuackRepository {
       update: { optionId: data.optionId },
     });
     return this.getPoll(data.quackId, data.userId);
+  }
+
+  /** Stub (ADR 0002): inserts the like, ignoring a duplicate. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  addLike(_data: { quackId: string; userId: string }): Promise<void> {
+    return Promise.reject(new Error('not implemented'));
+  }
+
+  /** Stub (ADR 0002): removes the like if there is one. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  removeLike(_data: { quackId: string; userId: string }): Promise<void> {
+    return Promise.reject(new Error('not implemented'));
+  }
+
+  /** Stub (ADR 0002): the count and the viewer's own like. */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getLikeState(_quackId: string, _userId: string): Promise<LikeState> {
+    return Promise.reject(new Error('not implemented'));
   }
 
   async getQuackOwner(

@@ -64,4 +64,27 @@ describe('QuackResponseDto.fromDomain', () => {
     expect(dto.replyToDeleted).toBe(true);
     expect(dto.replyToUser).toBeNull();
   });
+
+  // cases.md P12
+  it('P12 shows likes on a live quack but never on a placeholder row', () => {
+    const live = QuackResponseDto.fromDomain({
+      ...deletedQuack,
+      deleted: false,
+      text: 'hi',
+      userId: 'u2',
+      user: { id: 'u2', name: 'B', username: 'b' },
+      likeCount: 3,
+      likedByMe: true,
+    });
+    expect(live).toMatchObject({ likeCount: 3, likedByMe: true });
+
+    // The placeholder used to have likes; none of them may leave.
+    const placeholder = QuackResponseDto.fromDomain({
+      ...deletedQuack,
+      likeCount: 3,
+      likedByMe: true,
+    });
+    expect(placeholder.likeCount ?? null).toBeNull();
+    expect(placeholder.likedByMe ?? null).toBeNull();
+  });
 });
